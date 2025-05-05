@@ -1,6 +1,7 @@
 /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo/number.py
 /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo/target_detect_function.py
 /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo/pub_id.py
+/home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo/text_pub.py
 /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo/record.py
 /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo/__init__.py
 /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo/camera_capture_function.py
@@ -10,6 +11,7 @@
 /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo/__pycache__/number.cpython-310.pyc
 /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo/__pycache__/target_detect_function.cpython-310.pyc
 /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo/__pycache__/pub_id.cpython-310.pyc
+/home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo/__pycache__/text_pub.cpython-310.pyc
 /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo/__pycache__/record.cpython-310.pyc
 /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo/__pycache__/__init__.cpython-310.pyc
 /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo/__pycache__/camera_capture_function.cpython-310.pyc
@@ -33,3 +35,4 @@
 /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/ros_yolo/pub
 /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/ros_yolo/record
 /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/ros_yolo/save
+/home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/ros_yolo/text_pub

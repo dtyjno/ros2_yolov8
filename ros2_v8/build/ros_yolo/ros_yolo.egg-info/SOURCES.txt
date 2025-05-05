@@ -20,6 +20,7 @@ ros_yolo/pub_id.py
 ros_yolo/record.py
 ros_yolo/save.py
 ros_yolo/target_detect_function.py
+ros_yolo/text_pub.py
 test/test_copyright.py
 test/test_flake8.py
 test/test_pep257.py

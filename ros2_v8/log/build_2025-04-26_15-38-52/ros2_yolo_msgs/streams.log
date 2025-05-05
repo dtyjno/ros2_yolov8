@@ -1,0 +1,187 @@
+[0.011s] Invoking command in '/home/ak47k98/PycharmProjects/ros2_v8/build/ros2_yolo_msgs': CONDA_PROMPT_MODIFIER=(yolov8_10) /usr/bin/cmake --build /home/ak47k98/PycharmProjects/ros2_v8/build/ros2_yolo_msgs -- -j32 -l32
+[0.043s] [  3%] [34m[1mGenerating C code for ROS interfaces[0m
+[0.049s] [  6%] [34m[1mGenerating C++ code for ROS interfaces[0m
+[0.056s] [  6%] Built target ament_cmake_python_copy_ros2_yolo_msgs
+[0.175s] running egg_info
+[0.182s] writing ros2_yolo_msgs.egg-info/PKG-INFO
+[0.183s] writing dependency_links to ros2_yolo_msgs.egg-info/dependency_links.txt
+[0.183s] writing top-level names to ros2_yolo_msgs.egg-info/top_level.txt
+[0.199s] [  6%] Built target ros2_yolo_msgs__cpp
+[0.201s] [  9%] [32mBuilding C object CMakeFiles/ros2_yolo_msgs__rosidl_generator_c.dir/rosidl_generator_c/ros2_yolo_msgs/msg/detail/detected_box__functions.c.o[0m
+[0.201s] reading manifest file 'ros2_yolo_msgs.egg-info/SOURCES.txt'
+[0.202s] writing manifest file 'ros2_yolo_msgs.egg-info/SOURCES.txt'
+[0.207s] [ 12%] [34m[1mGenerating C++ introspection for ROS interfaces[0m
+[0.209s] [ 16%] [34m[1mGenerating C++ type support dispatch for ROS interfaces[0m
+[0.209s] [ 19%] [34m[1mGenerating C++ type support for eProsima Fast-RTPS[0m
+[0.223s] [ 19%] Built target ament_cmake_python_build_ros2_yolo_msgs_egg
+[0.248s] [ 22%] [32m[1mLinking C shared library libros2_yolo_msgs__rosidl_generator_c.so[0m
+[0.281s] [ 22%] Built target ros2_yolo_msgs__rosidl_generator_c
+[0.290s] [ 25%] [34m[1mGenerating C type support dispatch for ROS interfaces[0m
+[0.291s] [ 29%] [34m[1mGenerating C type support for eProsima Fast-RTPS[0m
+[0.291s] [ 32%] [34m[1mGenerating C introspection for ROS interfaces[0m
+[0.358s] [ 35%] [32mBuilding CXX object CMakeFiles/ros2_yolo_msgs__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/ros2_yolo_msgs/msg/detected_box__type_support.cpp.o[0m
+[0.373s] [ 38%] [32mBuilding CXX object CMakeFiles/ros2_yolo_msgs__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/ros2_yolo_msgs/msg/detail/dds_fastrtps/detected_box__type_support.cpp.o[0m
+[0.375s] [ 41%] [32mBuilding CXX object CMakeFiles/ros2_yolo_msgs__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/ros2_yolo_msgs/msg/detail/detected_box__type_support.cpp.o[0m
+[0.436s] [ 45%] [32mBuilding CXX object CMakeFiles/ros2_yolo_msgs__rosidl_typesupport_c.dir/rosidl_typesupport_c/ros2_yolo_msgs/msg/detected_box__type_support.cpp.o[0m
+[0.448s] [ 48%] [32mBuilding C object CMakeFiles/ros2_yolo_msgs__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/ros2_yolo_msgs/msg/detail/detected_box__type_support.c.o[0m
+[0.460s] [ 51%] [32m[1mLinking CXX shared library libros2_yolo_msgs__rosidl_typesupport_c.so[0m
+[0.472s] [ 54%] [32m[1mLinking C shared library libros2_yolo_msgs__rosidl_typesupport_introspection_c.so[0m
+[0.491s] [ 54%] Built target ros2_yolo_msgs__rosidl_typesupport_c
+[0.503s] [ 54%] Built target ros2_yolo_msgs__rosidl_typesupport_introspection_c
+[0.514s] [ 58%] [32mBuilding CXX object CMakeFiles/ros2_yolo_msgs__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/ros2_yolo_msgs/msg/detail/detected_box__type_support_c.cpp.o[0m
+[0.576s] [ 61%] [32m[1mLinking CXX shared library libros2_yolo_msgs__rosidl_typesupport_cpp.so[0m
+[0.616s] [ 61%] Built target ros2_yolo_msgs__rosidl_typesupport_cpp
+[0.617s] [ 64%] [32m[1mLinking CXX shared library libros2_yolo_msgs__rosidl_typesupport_introspection_cpp.so[0m
+[0.633s] [ 67%] [32m[1mLinking CXX shared library libros2_yolo_msgs__rosidl_typesupport_fastrtps_cpp.so[0m
+[0.655s] [ 67%] Built target ros2_yolo_msgs__rosidl_typesupport_introspection_cpp
+[0.690s] [ 67%] Built target ros2_yolo_msgs__rosidl_typesupport_fastrtps_cpp
+[0.709s] [ 70%] [32m[1mLinking CXX shared library libros2_yolo_msgs__rosidl_typesupport_fastrtps_c.so[0m
+[0.759s] [ 70%] Built target ros2_yolo_msgs__rosidl_typesupport_fastrtps_c
+[0.773s] [ 70%] Built target ros2_yolo_msgs
+[0.789s] [ 74%] [34m[1mGenerating Python code for ROS interfaces[0m
+[0.933s] [ 74%] Built target ros2_yolo_msgs__py
+[0.949s] [ 77%] [32mBuilding C object CMakeFiles/ros2_yolo_msgs__rosidl_generator_py.dir/rosidl_generator_py/ros2_yolo_msgs/msg/_detected_box_s.c.o[0m
+[1.021s] [ 80%] [32m[1mLinking C shared library rosidl_generator_py/ros2_yolo_msgs/libros2_yolo_msgs__rosidl_generator_py.so[0m
+[1.047s] [ 80%] Built target ros2_yolo_msgs__rosidl_generator_py
+[1.062s] [ 87%] [32mBuilding C object CMakeFiles/ros2_yolo_msgs__rosidl_typesupport_introspection_c__pyext.dir/rosidl_generator_py/ros2_yolo_msgs/_ros2_yolo_msgs_s.ep.rosidl_typesupport_introspection_c.c.o[0m
+[1.063s] [ 87%] [32mBuilding C object CMakeFiles/ros2_yolo_msgs__rosidl_typesupport_c__pyext.dir/rosidl_generator_py/ros2_yolo_msgs/_ros2_yolo_msgs_s.ep.rosidl_typesupport_c.c.o[0m
+[1.063s] [ 90%] [32mBuilding C object CMakeFiles/ros2_yolo_msgs__rosidl_typesupport_fastrtps_c__pyext.dir/rosidl_generator_py/ros2_yolo_msgs/_ros2_yolo_msgs_s.ep.rosidl_typesupport_fastrtps_c.c.o[0m
+[1.117s] [ 93%] [32m[1mLinking C shared library rosidl_generator_py/ros2_yolo_msgs/ros2_yolo_msgs_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so[0m
+[1.120s] [ 96%] [32m[1mLinking C shared library rosidl_generator_py/ros2_yolo_msgs/ros2_yolo_msgs_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so[0m
+[1.120s] [100%] [32m[1mLinking C shared library rosidl_generator_py/ros2_yolo_msgs/ros2_yolo_msgs_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so[0m
+[1.142s] [100%] Built target ros2_yolo_msgs__rosidl_typesupport_c__pyext
+[1.143s] [100%] Built target ros2_yolo_msgs__rosidl_typesupport_fastrtps_c__pyext
+[1.143s] [100%] Built target ros2_yolo_msgs__rosidl_typesupport_introspection_c__pyext
+[1.153s] Invoked command in '/home/ak47k98/PycharmProjects/ros2_v8/build/ros2_yolo_msgs' returned '0': CONDA_PROMPT_MODIFIER=(yolov8_10) /usr/bin/cmake --build /home/ak47k98/PycharmProjects/ros2_v8/build/ros2_yolo_msgs -- -j32 -l32
+[1.249s] Invoking command in '/home/ak47k98/PycharmProjects/ros2_v8/build/ros2_yolo_msgs': CONDA_PROMPT_MODIFIER=(yolov8_10) /usr/bin/cmake --install /home/ak47k98/PycharmProjects/ros2_v8/build/ros2_yolo_msgs
+[1.254s] -- Install configuration: ""
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ament_index/resource_index/rosidl_interfaces/ros2_yolo_msgs
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detected_box.h
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/rosidl_generator_c__visibility_control.h
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail/detected_box__functions.c
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail/detected_box__struct.h
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail/detected_box__type_support.h
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail/detected_box__functions.h
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/environment/library_path.sh
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/environment/library_path.dsv
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/libros2_yolo_msgs__rosidl_generator_c.so
+[1.254s] -- Set runtime path of "/home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/libros2_yolo_msgs__rosidl_generator_c.so" to ""
+[1.254s] -- Up-to-date: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs
+[1.254s] -- Up-to-date: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/rosidl_typesupport_fastrtps_c__visibility_control.h
+[1.254s] -- Up-to-date: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail/detected_box__rosidl_typesupport_fastrtps_c.h
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/libros2_yolo_msgs__rosidl_typesupport_fastrtps_c.so
+[1.254s] -- Set runtime path of "/home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/libros2_yolo_msgs__rosidl_typesupport_fastrtps_c.so" to ""
+[1.254s] -- Up-to-date: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs
+[1.254s] -- Up-to-date: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/rosidl_typesupport_introspection_c__visibility_control.h
+[1.254s] -- Up-to-date: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail/detected_box__rosidl_typesupport_introspection_c.h
+[1.254s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail/detected_box__type_support.c
+[1.255s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/libros2_yolo_msgs__rosidl_typesupport_introspection_c.so
+[1.255s] -- Set runtime path of "/home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/libros2_yolo_msgs__rosidl_typesupport_introspection_c.so" to ""
+[1.255s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/libros2_yolo_msgs__rosidl_typesupport_c.so
+[1.255s] -- Set runtime path of "/home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/libros2_yolo_msgs__rosidl_typesupport_c.so" to ""
+[1.255s] -- Up-to-date: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs
+[1.255s] -- Up-to-date: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg
+[1.255s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detected_box.hpp
+[1.255s] -- Up-to-date: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail
+[1.255s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail/detected_box__struct.hpp
+[1.255s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail/detected_box__traits.hpp
+[1.255s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail/detected_box__builder.hpp
+[1.255s] -- Up-to-date: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs
+[1.255s] -- Up-to-date: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg
+[1.255s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/rosidl_typesupport_fastrtps_cpp__visibility_control.h
+[1.255s] -- Up-to-date: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail
+[1.255s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail/dds_fastrtps
+[1.255s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail/detected_box__rosidl_typesupport_fastrtps_cpp.hpp
+[1.255s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/libros2_yolo_msgs__rosidl_typesupport_fastrtps_cpp.so
+[1.255s] -- Set runtime path of "/home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/libros2_yolo_msgs__rosidl_typesupport_fastrtps_cpp.so" to ""
+[1.255s] -- Up-to-date: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs
+[1.255s] -- Up-to-date: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg
+[1.255s] -- Up-to-date: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail
+[1.256s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail/detected_box__type_support.cpp
+[1.256s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/include/ros2_yolo_msgs/ros2_yolo_msgs/msg/detail/detected_box__rosidl_typesupport_introspection_cpp.hpp
+[1.256s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/libros2_yolo_msgs__rosidl_typesupport_introspection_cpp.so
+[1.256s] -- Set runtime path of "/home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/libros2_yolo_msgs__rosidl_typesupport_introspection_cpp.so" to ""
+[1.256s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/libros2_yolo_msgs__rosidl_typesupport_cpp.so
+[1.256s] -- Set runtime path of "/home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/libros2_yolo_msgs__rosidl_typesupport_cpp.so" to ""
+[1.256s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/environment/pythonpath.sh
+[1.256s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/environment/pythonpath.dsv
+[1.256s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs-0.0.0-py3.10.egg-info
+[1.256s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs-0.0.0-py3.10.egg-info/PKG-INFO
+[1.256s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs-0.0.0-py3.10.egg-info/dependency_links.txt
+[1.256s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs-0.0.0-py3.10.egg-info/top_level.txt
+[1.257s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs-0.0.0-py3.10.egg-info/SOURCES.txt
+[1.257s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs
+[1.257s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/ros2_yolo_msgs_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so
+[1.257s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/ros2_yolo_msgs_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so
+[1.257s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/libros2_yolo_msgs__rosidl_generator_py.so
+[1.257s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/_ros2_yolo_msgs_s.ep.rosidl_typesupport_introspection_c.c
+[1.257s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/_ros2_yolo_msgs_s.ep.rosidl_typesupport_fastrtps_c.c
+[1.257s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/msg
+[1.257s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/msg/_detected_box.py
+[1.257s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/msg/_detected_box_s.c
+[1.257s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/msg/__init__.py
+[1.257s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/_ros2_yolo_msgs_s.ep.rosidl_typesupport_c.c
+[1.257s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/__init__.py
+[1.257s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/ros2_yolo_msgs_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so
+[1.274s] Listing '/home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs'...
+[1.274s] Compiling '/home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/__init__.py'...
+[1.274s] Listing '/home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/msg'...
+[1.274s] Compiling '/home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/msg/__init__.py'...
+[1.274s] Compiling '/home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/msg/_detected_box.py'...
+[1.277s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/ros2_yolo_msgs_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so
+[1.277s] -- Set runtime path of "/home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/ros2_yolo_msgs_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so" to ""
+[1.277s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/ros2_yolo_msgs_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so
+[1.277s] -- Set runtime path of "/home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/ros2_yolo_msgs_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so" to ""
+[1.277s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/ros2_yolo_msgs_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so
+[1.277s] -- Set runtime path of "/home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/python3.10/site-packages/ros2_yolo_msgs/ros2_yolo_msgs_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so" to ""
+[1.278s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/libros2_yolo_msgs__rosidl_generator_py.so
+[1.278s] -- Set runtime path of "/home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/lib/libros2_yolo_msgs__rosidl_generator_py.so" to ""
+[1.278s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/msg/DetectedBox.idl
+[1.278s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/msg/DetectedBox.msg
+[1.278s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ament_index/resource_index/package_run_dependencies/ros2_yolo_msgs
+[1.278s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ament_index/resource_index/parent_prefix_path/ros2_yolo_msgs
+[1.278s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/environment/ament_prefix_path.sh
+[1.278s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/environment/ament_prefix_path.dsv
+[1.278s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/environment/path.sh
+[1.278s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/environment/path.dsv
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/local_setup.bash
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/local_setup.sh
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/local_setup.zsh
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/local_setup.dsv
+[1.279s] -- Up-to-date: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/package.dsv
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ament_index/resource_index/packages/ros2_yolo_msgs
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/export_ros2_yolo_msgs__rosidl_generator_cExport.cmake
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/export_ros2_yolo_msgs__rosidl_generator_cExport-noconfig.cmake
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/export_ros2_yolo_msgs__rosidl_typesupport_fastrtps_cExport.cmake
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/export_ros2_yolo_msgs__rosidl_typesupport_fastrtps_cExport-noconfig.cmake
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/ros2_yolo_msgs__rosidl_typesupport_introspection_cExport.cmake
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/ros2_yolo_msgs__rosidl_typesupport_introspection_cExport-noconfig.cmake
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/ros2_yolo_msgs__rosidl_typesupport_cExport.cmake
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/ros2_yolo_msgs__rosidl_typesupport_cExport-noconfig.cmake
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/export_ros2_yolo_msgs__rosidl_generator_cppExport.cmake
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/export_ros2_yolo_msgs__rosidl_typesupport_fastrtps_cppExport.cmake
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/export_ros2_yolo_msgs__rosidl_typesupport_fastrtps_cppExport-noconfig.cmake
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/ros2_yolo_msgs__rosidl_typesupport_introspection_cppExport.cmake
+[1.279s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/ros2_yolo_msgs__rosidl_typesupport_introspection_cppExport-noconfig.cmake
+[1.280s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/ros2_yolo_msgs__rosidl_typesupport_cppExport.cmake
+[1.280s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/ros2_yolo_msgs__rosidl_typesupport_cppExport-noconfig.cmake
+[1.280s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/export_ros2_yolo_msgs__rosidl_generator_pyExport.cmake
+[1.280s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/export_ros2_yolo_msgs__rosidl_generator_pyExport-noconfig.cmake
+[1.280s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/rosidl_cmake-extras.cmake
+[1.280s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/ament_cmake_export_dependencies-extras.cmake
+[1.280s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/ament_cmake_export_include_directories-extras.cmake
+[1.283s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/ament_cmake_export_libraries-extras.cmake
+[1.283s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/ament_cmake_export_targets-extras.cmake
+[1.283s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/rosidl_cmake_export_typesupport_targets-extras.cmake
+[1.283s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake
+[1.283s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/ros2_yolo_msgsConfig.cmake
+[1.283s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/cmake/ros2_yolo_msgsConfig-version.cmake
+[1.283s] -- Installing: /home/ak47k98/PycharmProjects/ros2_v8/install/ros2_yolo_msgs/share/ros2_yolo_msgs/package.xml
+[1.285s] Invoked command in '/home/ak47k98/PycharmProjects/ros2_v8/build/ros2_yolo_msgs' returned '0': CONDA_PROMPT_MODIFIER=(yolov8_10) /usr/bin/cmake --install /home/ak47k98/PycharmProjects/ros2_v8/build/ros2_yolo_msgs

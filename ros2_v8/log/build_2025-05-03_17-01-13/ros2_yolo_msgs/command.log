@@ -1,0 +1,4 @@
+Invoking command in '/home/ak47k98/PycharmProjects/ros2_v8/build/ros2_yolo_msgs': CONDA_PROMPT_MODIFIER=(yolov8_10) /usr/bin/cmake --build /home/ak47k98/PycharmProjects/ros2_v8/build/ros2_yolo_msgs -- -j32 -l32
+Invoked command in '/home/ak47k98/PycharmProjects/ros2_v8/build/ros2_yolo_msgs' returned '0': CONDA_PROMPT_MODIFIER=(yolov8_10) /usr/bin/cmake --build /home/ak47k98/PycharmProjects/ros2_v8/build/ros2_yolo_msgs -- -j32 -l32
+Invoking command in '/home/ak47k98/PycharmProjects/ros2_v8/build/ros2_yolo_msgs': CONDA_PROMPT_MODIFIER=(yolov8_10) /usr/bin/cmake --install /home/ak47k98/PycharmProjects/ros2_v8/build/ros2_yolo_msgs
+Invoked command in '/home/ak47k98/PycharmProjects/ros2_v8/build/ros2_yolo_msgs' returned '0': CONDA_PROMPT_MODIFIER=(yolov8_10) /usr/bin/cmake --install /home/ak47k98/PycharmProjects/ros2_v8/build/ros2_yolo_msgs

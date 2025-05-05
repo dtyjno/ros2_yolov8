@@ -1,0 +1,6 @@
+{
+  "package_name": "ros2_yolo_msgs",
+  "non_idl_tuples": [
+    "/home/ak47k98/PycharmProjects/ros2_v8/src/ros2_yolo_msgs:msg/DetectedBox.msg"
+  ]
+}

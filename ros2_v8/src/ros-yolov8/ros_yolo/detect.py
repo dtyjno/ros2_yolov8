@@ -274,6 +274,9 @@ class AIDetector(Node):
             # 发布消息（只发一条，包含 circle 和 H 的中心坐标）
             self.box_pub.publish(msg)
             return frame
+        else :
+            return frame
+
 
 
 

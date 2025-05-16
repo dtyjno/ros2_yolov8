@@ -24,7 +24,7 @@ class ImageSaver(Node):
 
         self.subscription = self.create_subscription(
             Image,
-            'image_topic',  # 订阅 detect_v8.py 中发布的话题
+            'raw_images',  # 订阅 detect.py 中发布的话题
             self.listener_callback,
             qos
         )

@@ -20,8 +20,8 @@ class AIDetector(Node):
         self.declare_parameters(
             namespace='',
             parameters=[
-                #('image_topic', 'image_topic'),  # 图像订阅话题
-                ('image_topic', 'raw_images'),  # 图像订阅话题
+                ('image_topic', 'image_topic'),  # 图像订阅话题
+                #('image_topic', 'raw_images'),  # 图像订阅话题
                 ('model_path1', 'best_old_circle.pt'),  # 模型路径1
                 ('model_path2', 'best_H.pt'),# 模型路径2
                 ('conf_threshold', 0.5),  # 置信度阈值
@@ -242,7 +242,7 @@ class AIDetector(Node):
             msg.x2 = float(cx)
             msg.y2 = float(cy)
 
-        
+        # 发布消息（只发一条，包含 circle 和 H 的中心坐标）
         self.box_pub.publish(msg)
         return frame
 

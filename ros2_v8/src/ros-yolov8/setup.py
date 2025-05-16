@@ -28,7 +28,8 @@ setup(
             'detector_text = ros_yolo.detect_text:main',
             'save = ros_yolo.save:main',
             'record = ros_yolo.record:main',
-            'text_pub = ros_yolo.text_pub:main'
+            'text_pub = ros_yolo.text_pub:main',
+            'std = ros_yolo.text_pub_msg:main'
         ],
     },
 )

@@ -1,0 +1,33 @@
+[0.705s] Invoking command in '/home/ak47k98/PycharmProjects/ros2_v8/src/ros-yolov8': CONDA_PROMPT_MODIFIER=(yolov8_10) PYTHONPATH=/home/ak47k98/PycharmProjects/ros2_v8/build/ros_yolo/prefix_override:/home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../../build/ros_yolo build --build-base /home/ak47k98/PycharmProjects/ros2_v8/build/ros_yolo/build install --record /home/ak47k98/PycharmProjects/ros2_v8/build/ros_yolo/install.log --single-version-externally-managed install_data
+[0.969s] running egg_info
+[0.970s] writing ../../build/ros_yolo/ros_yolo.egg-info/PKG-INFO
+[0.970s] writing dependency_links to ../../build/ros_yolo/ros_yolo.egg-info/dependency_links.txt
+[0.970s] writing entry points to ../../build/ros_yolo/ros_yolo.egg-info/entry_points.txt
+[0.970s] writing requirements to ../../build/ros_yolo/ros_yolo.egg-info/requires.txt
+[0.970s] writing top-level names to ../../build/ros_yolo/ros_yolo.egg-info/top_level.txt
+[0.973s] reading manifest file '../../build/ros_yolo/ros_yolo.egg-info/SOURCES.txt'
+[0.973s] adding license file 'LICENSE'
+[0.974s] writing manifest file '../../build/ros_yolo/ros_yolo.egg-info/SOURCES.txt'
+[0.974s] running build
+[0.974s] running build_py
+[0.974s] copying ros_yolo/detect.py -> /home/ak47k98/PycharmProjects/ros2_v8/build/ros_yolo/build/lib/ros_yolo
+[0.975s] running install
+[0.975s] running install_lib
+[0.976s] copying /home/ak47k98/PycharmProjects/ros2_v8/build/ros_yolo/build/lib/ros_yolo/detect.py -> /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo
+[0.977s] byte-compiling /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo/detect.py to detect.cpython-310.pyc
+[0.979s] running install_data
+[0.979s] running install_egg_info
+[0.981s] removing '/home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo-0.0.0-py3.10.egg-info' (and everything under it)
+[0.981s] Copying ../../build/ros_yolo/ros_yolo.egg-info to /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages/ros_yolo-0.0.0-py3.10.egg-info
+[0.981s] running install_scripts
+[1.003s] Installing capturer script to /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/ros_yolo
+[1.003s] Installing detector script to /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/ros_yolo
+[1.003s] Installing detector1 script to /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/ros_yolo
+[1.003s] Installing detector_text script to /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/ros_yolo
+[1.004s] Installing nub script to /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/ros_yolo
+[1.004s] Installing pub script to /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/ros_yolo
+[1.004s] Installing record script to /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/ros_yolo
+[1.004s] Installing save script to /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/ros_yolo
+[1.004s] Installing text_pub script to /home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/ros_yolo
+[1.004s] writing list of installed files to '/home/ak47k98/PycharmProjects/ros2_v8/build/ros_yolo/install.log'
+[1.028s] Invoked command in '/home/ak47k98/PycharmProjects/ros2_v8/src/ros-yolov8' returned '0': CONDA_PROMPT_MODIFIER=(yolov8_10) PYTHONPATH=/home/ak47k98/PycharmProjects/ros2_v8/build/ros_yolo/prefix_override:/home/ak47k98/PycharmProjects/ros2_v8/install/ros_yolo/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../../build/ros_yolo build --build-base /home/ak47k98/PycharmProjects/ros2_v8/build/ros_yolo/build install --record /home/ak47k98/PycharmProjects/ros2_v8/build/ros_yolo/install.log --single-version-externally-managed install_data

@@ -1,5 +1,6 @@
 # src/ros2-yolov8/ros_yolo/detect_v8.py
 from ros2_yolo_msgs.msg import DetectedBox
+from std_msgs.msg import Int32
 import rclpy
 from rclpy.node import Node
 from rclpy.parameter import Parameter
@@ -23,7 +24,7 @@ class AIDetector(Node):
             namespace='',
             parameters=[
                 ('camera_id', '0'),  # 摄像头ID/URL
-                ('model_path1', '/home/ak47k98/PycharmProjects/ros2_v8/best_old_circle.pt'),  # 模型路径1
+                ('model_path1', '/home/ak47k98/PycharmProjects/ros2_v8/best_circle.pt'),  # 模型路径1
                 ('model_path2', '/home/ak47k98/PycharmProjects/ros2_v8/best_H.pt'),# 模型路径2
                 ('conf_threshold', 0.5),  # 置信度阈值
                 ('device', 'cuda:0'),  # 推理设备
@@ -47,8 +48,17 @@ class AIDetector(Node):
         self.center_x, self.center_y = 640, 360  # 圆心位置
         self.radius = 40  # 半径
         self.inside_counter = 0  # 连续帧计数
-        self.inside_threshold = 15  # 连续帧阈值
+        self.inside_threshold = 30  # 连续帧阈值
         self.pause_until = None  # 控制发布暂停时间
+
+        self.current_state = 0  # 默认状态
+        self.state_sub = self.create_subscription(
+            Int32,
+            'current_state',
+            self._state_callback,
+            10
+        )
+
 
         self.get_logger().info("节点初始化完成")
 
@@ -66,6 +76,10 @@ class AIDetector(Node):
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_size[0])
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_size[1])
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # 最小化缓冲区
+
+    def _state_callback(self, msg: Int32):
+        self.current_state = msg.data
+        self.get_logger().info(f"接收到状态更新: {self.current_state}", throttle_duration_sec=2.0)
 
     def _init_model(self):
         """初始化AI模型"""
@@ -178,62 +192,91 @@ class AIDetector(Node):
                 time.sleep(0.05)
 
     def _draw_detections(self, frame, results):
-        """绘制检测结果并发布最大目标（含圆内判断+servo控制）"""
+        """绘制检测结果，分开发布 circle 和 H 坐标，servo=1 只受 circle 控制"""
         cv2.circle(frame, (self.center_x, self.center_y), self.radius, (0, 255, 255), 2, cv2.LINE_AA)
+        # 如果状态是 3，先做 stuffed 弹窗逻辑
+        if self.current_state == 3:     #侦查
+            idx = 0
+            for result in results:
+                for box in result.boxes.cpu().numpy():
+                    cls_id = int(box.cls[0])
+                    label_name = result.names[cls_id]
+                    if label_name != 'H':
+                        x1, y1, x2, y2 = map(int, box.xyxy[0])
+                        roi = frame[y1:y2, x1:x2]
+                        if roi.size == 0:
+                            continue
+                        win = f'Stuffed_{idx}'
+                        resized_roi = cv2.resize(roi, (160, 160))
+                        cv2.imshow(win, resized_roi)
+                        cv2.moveWindow(win, 50 + idx * 180, 50)  # 每个窗口水平间隔180px
+                        idx += 1
+            return frame
+        elif self.current_state != 1:
+            # 分别存储两类目标框  常规逻辑
+            circle_boxes = []
+            h_boxes = []
 
-        target_boxes = []
-        largest_box = None
+            for result in results:
+                for box in result.boxes.cpu().numpy():
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    cls_id = int(box.cls[0])
+                    label_name = result.names[cls_id]
+                    conf = float(box.conf[0])
 
-        for result in results:
-            for box in result.boxes.cpu().numpy():
-                x1, y1, x2, y2 = map(int, box.xyxy[0])
-                cls_id = int(box.cls[0])
-                label_name = result.names[cls_id]
-                label = f"{label_name} {box.conf[0]:.2f}"
+                    if label_name != 'person':
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                        cv2.putText(frame, f"{label_name} {conf:.2f}", (x1, y1 - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.putText(frame, label, (x1, y1 - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                        area = (x2 - x1) * (y2 - y1)
+                        if label_name == 'circle':
+                            circle_boxes.append((area, x1, y1, x2, y2))
+                        elif label_name == 'H':
+                            h_boxes.append((area, x1, y1, x2, y2))
 
-                if label_name != 'person':
-                    area = (x2 - x1) * (y2 - y1)
-                    target_boxes.append((area, x1, y1, x2, y2))
-
-        # 控制发布逻辑
-        if target_boxes and (self.pause_until is None or time.time() >= self.pause_until):
-            largest_box = max(target_boxes, key=lambda b: b[0])
-            _, x1, y1, x2, y2 = largest_box
-            center_x = (x1 + x2) // 2
-            center_y = (y1 + y2) // 2
-
-            # 判断是否在圆内
-            dx = center_x - self.center_x
-            dy = center_y - self.center_y
-            in_circle = dx * dx + dy * dy <= self.radius * self.radius
-
-            if in_circle:
-                self.inside_counter += 1
-            else:
-                self.inside_counter = 0
-
-            # 构建并发布消息
+            # 初始化消息
             msg = DetectedBox()
-            msg.x1 = float(x1)
-            msg.y1 = float(y1)
-            msg.x2 = float(x2)
-            msg.y2 = float(y2)
+            msg.servo = 0
 
-            if self.inside_counter >= self.inside_threshold:
-                msg.servo = 1
-                self.box_pub.publish(msg)
-                self.get_logger().info("目标在圆内15帧，servo=1 已发布")
-                self.pause_until = time.time() + 0.5  # 暂停0.5秒
-                self.inside_counter = 0  # 重置计数器
-            else:
-                msg.servo = 0
-                self.box_pub.publish(msg)
+            # ----- 处理 circle 区域检测与 servo -----
+            if circle_boxes and (self.pause_until is None or time.time() >= self.pause_until):
+                _, x1, y1, x2, y2 = max(circle_boxes, key=lambda b: b[0])
+                cx = (x1 + x2) // 2
+                cy = (y1 + y2) // 2
 
-        return frame
+                msg.x1 = float(cx)
+                msg.y1 = float(cy)
+
+                # 判断是否在目标圆内
+                dx = cx - self.center_x
+                dy = cy - self.center_y
+                if dx * dx + dy * dy <= self.radius * self.radius and self.current_state == 0:
+                    self.inside_counter += 1
+                elif self.current_state == 0 :
+                    self.inside_counter = 0
+
+                if self.inside_counter >= self.inside_threshold and self.current_state == 0:  # 投弹发布
+                    msg.servo = 1
+                    self.pause_until = time.time() + 1.0
+                    self.inside_counter = 0
+                    self.get_logger().info("circle 连续30帧在圆内，servo=1 已发布")
+
+            # ----- 处理 H 坐标 -----
+            if h_boxes:
+                _, x1, y1, x2, y2 = max(h_boxes, key=lambda b: b[0])
+                cx = (x1 + x2) // 2
+                cy = (y1 + y2) // 2
+
+                msg.x2 = float(cx)
+                msg.y2 = float(cy)
+
+            # 发布消息（只发一条，包含 circle 和 H 的中心坐标）
+            self.box_pub.publish(msg)
+            return frame
+
+
+
 
     def destroy_node(self):
         """节点关闭处理"""

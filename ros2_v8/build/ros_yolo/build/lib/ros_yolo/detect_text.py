@@ -138,63 +138,123 @@ class AIDetector(Node):
                 time.sleep(0.05)
 
 
+    def _process_loop(self):
+        """AI处理循环（双模型推理 + 合并检测结果）"""
+        while self.running:
+            start_time = time.time()
+
+            # 获取最新帧
+            with self.frame_lock:
+                frame = self.latest_frame.copy() if self.latest_frame is not None else None
+
+            if frame is None:
+                time.sleep(0.001)
+                continue
+
+            # 推理参数
+            conf_thres = self.get_parameter('conf_threshold').value
+
+            try:
+                # 分别执行两个模型推理
+                results1 = self.model1.predict(source=frame, conf=conf_thres, verbose=False)
+                results2 = self.model2.predict(source=frame, conf=conf_thres, verbose=False)
+
+                # 合并两个模型的推理结果
+                combined_results = results1 + results2
+
+                # 绘制检测框并发布最大目标
+                annotated_frame = self._draw_detections(frame, combined_results)
+
+                # 显示处理图像
+                window_width, window_height = 1920, 1080
+                resized_frame = cv2.resize(annotated_frame, (window_width, window_height))
+                cv2.imshow('AI Detection', resized_frame)
+                cv2.waitKey(1)
+
+                # 打印性能日志
+                self.get_logger().info(
+                    f"处理延迟: {(time.time() - start_time) * 1000:.1f}ms",
+                    throttle_duration_sec=0.33
+                )
+            except Exception as e:
+                self.get_logger().error(f"推理过程出错: {str(e)}")
+                time.sleep(0.05)
+
     def _draw_detections(self, frame, results):
-        """绘制检测结果并发布最大目标（含圆内判断+servo控制）"""
+        """绘制检测结果，分开发布 circle 和 H 坐标，servo=1 只受 circle 控制"""
         cv2.circle(frame, (self.center_x, self.center_y), self.radius, (0, 255, 255), 2, cv2.LINE_AA)
 
-        target_boxes = []
-        largest_box = None
+        # 分别存储两类目标框
+        circle_boxes = []
+        h_boxes = []
 
         for result in results:
             for box in result.boxes.cpu().numpy():
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
                 cls_id = int(box.cls[0])
                 label_name = result.names[cls_id]
-                label = f"{label_name} {box.conf[0]:.2f}"
-
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.putText(frame, label, (x1, y1 - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                conf = float(box.conf[0])
 
                 if label_name != 'person':
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    cv2.putText(frame, f"{label_name} {conf:.2f}", (x1, y1 - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
                     area = (x2 - x1) * (y2 - y1)
-                    target_boxes.append((area, x1, y1, x2, y2))
+                    if label_name == 'circle':
+                        circle_boxes.append((area, x1, y1, x2, y2))
+                    elif label_name == 'H':
+                        h_boxes.append((area, x1, y1, x2, y2))
 
-        # 控制发布逻辑
-        if target_boxes and (self.pause_until is None or time.time() >= self.pause_until):
-            largest_box = max(target_boxes, key=lambda b: b[0])
-            _, x1, y1, x2, y2 = largest_box
-            center_x = (x1 + x2) // 2
-            center_y = (y1 + y2) // 2
+        # 初始化消息
+        msg = DetectedBox()
+        msg.servo = 0
 
-            # 判断是否在圆内
-            dx = center_x - self.center_x
-            dy = center_y - self.center_y
-            in_circle = dx * dx + dy * dy <= self.radius * self.radius
+        # ----- 处理 circle 区域检测与 servo -----
+        if circle_boxes and (self.pause_until is None or time.time() >= self.pause_until):
+            _, x1, y1, x2, y2 = max(circle_boxes, key=lambda b: b[0])
+            cx = (x1 + x2) // 2
+            cy = (y1 + y2) // 2
 
-            if in_circle:
+            msg.x1 = float(cx)
+            msg.y1 = float(cy)
+
+            # 判断是否在目标圆内
+            dx = cx - self.center_x
+            dy = cy - self.center_y
+            if dx * dx + dy * dy <= self.radius * self.radius:
                 self.inside_counter += 1
             else:
                 self.inside_counter = 0
 
-            # 构建并发布消息
-            msg = DetectedBox()
-            msg.x1 = float(x1)
-            msg.y1 = float(y1)
-            msg.x2 = float(x2)
-            msg.y2 = float(y2)
-
             if self.inside_counter >= self.inside_threshold:
                 msg.servo = 1
-                self.box_pub.publish(msg)
-                self.get_logger().info("目标在圆内15帧，servo=1 已发布")
-                self.pause_until = time.time() + 0.5  # 暂停0.5秒
-                self.inside_counter = 0  # 重置计数器
-            else:
-                msg.servo = 0
-                self.box_pub.publish(msg)
+                self.pause_until = time.time() + 0.5
+                self.inside_counter = 0
+                self.get_logger().info("circle 连续15帧在圆内，servo=1 已发布")
 
+        # ----- 处理 H 坐标 -----
+        if h_boxes:
+            _, x1, y1, x2, y2 = max(h_boxes, key=lambda b: b[0])
+            cx = (x1 + x2) // 2
+            cy = (y1 + y2) // 2
+
+            msg.x2 = float(cx)
+            msg.y2 = float(cy)
+
+        # 发布消息（只发一条，包含 circle 和 H 的中心坐标）
+        self.box_pub.publish(msg)
         return frame
+
+    def destroy_node(self):
+        """节点关闭处理"""
+        self.running = False
+        self.cap_thread.join()
+        self.proc_thread.join()
+        self.cap.release()
+        cv2.destroyAllWindows()
+        super().destroy_node()
+
 
     def destroy_node(self):
         """节点关闭处理"""

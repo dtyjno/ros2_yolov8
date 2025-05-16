@@ -7,5 +7,6 @@ nub = ros_yolo.number:main
 pub = ros_yolo.pub_id:main
 record = ros_yolo.record:main
 save = ros_yolo.save:main
+std = ros_yolo.text_pub_msg:main
 text_pub = ros_yolo.text_pub:main
 

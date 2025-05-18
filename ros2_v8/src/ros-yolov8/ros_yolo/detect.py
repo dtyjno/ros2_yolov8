@@ -11,13 +11,14 @@ import cv2
 from ultralytics import YOLO
 import threading
 import time
+import numpy as np
 
 
 class AIDetector(Node):
     """智能检测节点（含摄像头直读+原始图像发布）"""
 
     def __init__(self):
-        super().__init__('ai_detector')
+        super().__init__('detector')
 
         # ========== 参数声明 ==========
         self.declare_parameters(
@@ -51,12 +52,15 @@ class AIDetector(Node):
         self.inside_threshold = 30  # 连续帧阈值
         self.pause_until = None  # 控制发布暂停时间
 
+        self._load_camera_calibration('rgb_camera_calib_1.npz')
+
         self.current_state = 0  # 默认状态
         self.state_sub = self.create_subscription(
             Int32,
             'current_state',
             self._state_callback,
             10
+
         )
 
 
@@ -98,6 +102,18 @@ class AIDetector(Node):
         except Exception as e:
             self.get_logger().error(f"模型加载失败: {str(e)}")
             raise
+    def _load_camera_calibration(self, path):
+        """加载相机标定参数"""
+        try:
+            calib_data = np.load(path)
+            self.camera_matrix = calib_data['camera_matrix']
+            self.dist_coeffs = calib_data['dist_coeffs']
+            self.get_logger().info("成功加载相机标定参数")
+        except Exception as e:
+            self.get_logger().error(f"加载标定参数失败: {str(e)}")
+            self.camera_matrix = None
+            self.dist_coeffs = None
+
 
     def _init_publishers(self):
         """初始化发布器"""
@@ -161,6 +177,9 @@ class AIDetector(Node):
             if frame is None:
                 time.sleep(0.001)
                 continue
+
+            if self.camera_matrix is not None and self.dist_coeffs is not None:
+                frame = cv2.undistort(frame, self.camera_matrix, self.dist_coeffs)
 
             # 推理参数
             conf_thres = self.get_parameter('conf_threshold').value

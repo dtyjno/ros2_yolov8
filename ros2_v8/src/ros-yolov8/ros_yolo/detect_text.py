@@ -9,6 +9,7 @@ import cv2
 from ultralytics import YOLO
 import threading
 import time
+import numpy as np
 
 class AIDetector(Node):
     """智能检测节点（从ROS 2图像话题接收图像并检测）"""
@@ -95,6 +96,18 @@ class AIDetector(Node):
         except Exception as e:
             self.get_logger().error(f"图像转换失败: {str(e)}")
 
+    def _load_camera_calibration(self, path):
+        """加载相机标定参数"""
+        try:
+            calib_data = np.load(path)
+            self.camera_matrix = calib_data['camera_matrix']
+            self.dist_coeffs = calib_data['dist_coeffs']
+            self.get_logger().info("成功加载相机标定参数")
+        except Exception as e:
+            self.get_logger().error(f"加载标定参数失败: {str(e)}")
+            self.camera_matrix = None
+            self.dist_coeffs = None
+
     def _process_loop(self):
         """AI处理循环（双模型推理 + 合并检测结果）"""
         while self.running:
@@ -150,6 +163,8 @@ class AIDetector(Node):
             if frame is None:
                 time.sleep(0.001)
                 continue
+            if self.camera_matrix is not None and self.dist_coeffs is not None:
+                frame = cv2.undistort(frame, self.camera_matrix, self.dist_coeffs)
 
             # 推理参数
             conf_thres = self.get_parameter('conf_threshold').value

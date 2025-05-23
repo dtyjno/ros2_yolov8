@@ -45,8 +45,9 @@ class AIDetector(Node):
         # ========== ROS接口 ==========
         self._init_publishers()
         self._init_threads()
-        # 圆心相关初始化（建议加在 __init__ 的末尾）
-        self.center_x, self.center_y = 640, 360  # 圆心位置
+        # 圆心相关初始化
+        self.center_1x, self.center_1y = 505, 470  # 圆心位置640.360
+        self.center_2x, self.center_2y = 775, 470  # 圆心位置
         self.radius = 40  # 半径
         self.inside_counter = 0  # 连续帧计数
         self.inside_threshold = 30  # 连续帧阈值
@@ -62,7 +63,12 @@ class AIDetector(Node):
             10
 
         )
-
+        # 建议放在摄像头初始化后
+        h, w = 720, 1280  # 替换为你的图像尺寸，或者动态从第一帧获取
+        self.map1, self.map2 = cv2.initUndistortRectifyMap(
+            self.camera_matrix, self.dist_coeffs, None,
+            self.camera_matrix, (w, h), cv2.CV_16SC2
+        )
 
         self.get_logger().info("节点初始化完成")
 
@@ -179,15 +185,16 @@ class AIDetector(Node):
                 continue
 
             if self.camera_matrix is not None and self.dist_coeffs is not None:
-                frame = cv2.undistort(frame, self.camera_matrix, self.dist_coeffs)
+                #frame = cv2.undistort(frame, self.camera_matrix, self.dist_coeffs)
+                frame = cv2.remap(frame, self.map1, self.map2, interpolation=cv2.INTER_LINEAR)
 
             # 推理参数
             conf_thres = self.get_parameter('conf_threshold').value
 
             try:
                 # 分别执行两个模型推理
-                results1 = self.model1.predict(source=frame, conf=conf_thres, verbose=False)
-                results2 = self.model2.predict(source=frame, conf=conf_thres, verbose=False)
+                results1 = self.model1.predict(source=frame, conf=conf_thres, verbose=False ,stream=False)
+                results2 = self.model2.predict(source=frame, conf=conf_thres, verbose=False ,stream=False)
 
                 # 合并两个模型的推理结果
                 combined_results = results1 + results2
@@ -212,12 +219,22 @@ class AIDetector(Node):
 
     def _draw_detections(self, frame, results):
         """绘制检测结果，分开发布 circle 和 H 坐标，servo=1 只受 circle 控制"""
-        cv2.circle(frame, (self.center_x, self.center_y), self.radius, (0, 255, 255), 2, cv2.LINE_AA)
+        cv2.circle(frame, (self.center_1x, self.center_1y), self.radius, (0, 255, 255), 2, cv2.LINE_AA)
+        cv2.circle(frame, (self.center_2x, self.center_2y), self.radius, (0, 255, 255), 2, cv2.LINE_AA)
         # 如果状态是 3，先做 stuffed 弹窗逻辑
         if self.current_state == 3:     #侦查
             idx = 0
             for result in results:
                 for box in result.boxes.cpu().numpy():
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    cls_id = int(box.cls[0])
+                    label_name = result.names[cls_id]
+                    conf = float(box.conf[0])
+
+                    if label_name != 'person':
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                        cv2.putText(frame, f"{label_name} {conf:.2f}", (x1, y1 - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                     cls_id = int(box.cls[0])
                     label_name = result.names[cls_id]
                     if label_name != 'H':
@@ -268,18 +285,25 @@ class AIDetector(Node):
                 msg.y1 = float(cy)
 
                 # 判断是否在目标圆内
-                dx = cx - self.center_x
-                dy = cy - self.center_y
-                if dx * dx + dy * dy <= self.radius * self.radius and self.current_state == 0:
+                d1x = cx - self.center_1x
+                d1y = cy - self.center_1y
+                d2x = cx - self.center_2x
+                d2y = cy - self.center_2y
+                if (d1x * d1x + d1y * d1y <= self.radius * self.radius or d2x * d2x + d2y * d2y <= self.radius * self.radius) and self.current_state == 0:
                     self.inside_counter += 1
-                elif self.current_state == 0 :
+                elif self.current_state == 0:
                     self.inside_counter = 0
 
                 if self.inside_counter >= self.inside_threshold and self.current_state == 0:  # 投弹发布
+                    if d1x * d1x + d1y * d1y <= self.radius * self.radius :
+                        self.get_logger().info("左舵投弹！！！")
+                    else:
+                        self.get_logger().info("右舵投弹！！！")
                     msg.servo = 1
                     self.pause_until = time.time() + 1.0
                     self.inside_counter = 0
                     self.get_logger().info("circle 连续30帧在圆内，servo=1 已发布")
+
 
             # ----- 处理 H 坐标 -----
             if h_boxes:

@@ -44,7 +44,7 @@ class AIDetector(Node):
         self.center_x, self.center_y = 640, 360  # 圆心位置
         self.radius = 40  # 半径
         self.inside_counter = 0  # 连续帧计数
-        self.inside_threshold = 15  # 连续帧阈值
+        self.inside_threshold = 30  # 连续帧阈值
         self.pause_until = None  # 控制发布暂停时间
         self.get_logger().info("节点初始化完成")
 

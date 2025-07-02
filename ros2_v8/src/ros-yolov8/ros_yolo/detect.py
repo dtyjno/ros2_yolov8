@@ -46,8 +46,8 @@ class AIDetector(Node):
         self._init_publishers()
         self._init_threads()
         # 圆心相关初始化
-        self.center_1x, self.center_1y = 505, 470  # 圆心位置640.360
-        self.center_2x, self.center_2y = 775, 470  # 圆心位置
+        self.center_1x, self.center_1y = 680, 500 # 圆心位置640.360      135,110
+        self.center_2x, self.center_2y = 680, 525  # 圆心位置  后面
         self.radius = 40  # 半径
         self.inside_counter = 0  # 连续帧计数
         self.inside_threshold = 30  # 连续帧阈值
@@ -296,11 +296,11 @@ class AIDetector(Node):
 
                 if self.inside_counter >= self.inside_threshold and self.current_state == 0:  # 投弹发布
                     if d1x * d1x + d1y * d1y <= self.radius * self.radius :
-                        self.get_logger().info("左舵投弹！！！")
+                        self.get_logger().info("前舵投弹！！！")
                     else:
-                        self.get_logger().info("右舵投弹！！！")
+                        self.get_logger().info("后舵投弹！！！")
                     msg.servo = 1
-                    self.pause_until = time.time() + 1.0
+                    self.pause_until = time.time() + 1.5
                     self.inside_counter = 0
                     self.get_logger().info("circle 连续30帧在圆内，servo=1 已发布")
 

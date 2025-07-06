@@ -29,6 +29,7 @@ setup(
             'save = ros_yolo.save:main',
             'record = ros_yolo.record:main',
             'text_pub = ros_yolo.text_pub:main',
+            'test_servo_node = ros_yolo.test_servo_node:main',
             'std = ros_yolo.text_pub_msg:main'
         ],
     },

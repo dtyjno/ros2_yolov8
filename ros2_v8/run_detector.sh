@@ -19,7 +19,7 @@ conda activate yolov8_10 || { echo "环境激活失败！"; exit 1; }
 
 echo -e "\n=== 设置ROS2工作区 ==="
 source install/setup.bash || { echo "工作区设置失败！"; exit 1; }
-
+export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1
 echo -e "\n=== 启动YOLOv8检测节点（RTSP模式）==="
 echo "摄像头地址: $RTSP_URL"
 ros2 run ros_yolo detector --ros-args -p camera_id:="$RTSP_URL"

@@ -71,8 +71,8 @@ class AIDetector(Node):
         self._init_publishers()
         self._init_threads()
         # 圆心相关初始化
-        self.center_1x, self.center_1y = 700, 460 # 圆心位置640.360      135,110     右侧
-        self.center_2x, self.center_2y = 660, 460  # 圆心位置  后面
+        self.center_1x, self.center_1y = 700, 430 # 圆心位置640.360      135,110     右侧
+        self.center_2x, self.center_2y = 660, 430  # 圆心位置  后面
         self.radius = 40  # 半径
 
 

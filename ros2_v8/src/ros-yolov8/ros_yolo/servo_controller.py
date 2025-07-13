@@ -54,11 +54,11 @@ class ServoController:
         self.node.get_logger().info(f"Servo{servo_id} → 开始投弹")
 
         # 第一步：发射
-        self.set_servo(servo_id, 1864)
+        #self.set_servo(servo_id, 1864)
         #time.sleep(delay)
 
         # 第二步：收回
-        self.set_servo(servo_id, 1200)#1164
+        #self.set_servo(servo_id, 1200)#1164
         #time.sleep(delay)
 
         # 第三步：复位

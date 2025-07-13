@@ -71,8 +71,8 @@ class AIDetector(Node):
         self._init_publishers()
         self._init_threads()
         # 圆心相关初始化
-        self.center_1x, self.center_1y = 700, 430 # 圆心位置640.360      135,110     右侧
-        self.center_2x, self.center_2y = 660, 430  # 圆心位置  后面
+        self.center_1x, self.center_1y = 710, 450 # 圆心位置640.360      135,110     右侧
+        self.center_2x, self.center_2y = 650, 450  # 圆心位置  后面
         self.radius = 40  # 半径
 
 
@@ -81,7 +81,7 @@ class AIDetector(Node):
 
         # ====== 投弹计时器相关变量 ======
         self.stay_start_time = None  # 记录进入圆内且满足高度时的起始时间戳
-        self.stay_duration_threshold = 3.0  # 满足条件后持续时间（秒）阈值
+        self.stay_duration_threshold = 2.0  # 满足条件后持续时间（秒）阈值
 
 
 
@@ -255,11 +255,10 @@ class AIDetector(Node):
                 frame = self.latest_frame.copy() if self.latest_frame is not None else None
 
             if frame is None:
-                time.sleep(0.001)
+                time.sleep(0.0001)
                 continue
 
             if self.camera_matrix is not None and self.dist_coeffs is not None:
-                #frame = cv2.undistort(frame, self.camera_matrix, self.dist_coeffs)
                 frame = cv2.remap(frame, self.map1, self.map2, interpolation=cv2.INTER_LINEAR)
 
             # 推理参数
@@ -267,14 +266,15 @@ class AIDetector(Node):
 
             try:
                 # 分别执行两个模型推理
-                results1 = self.model1.predict(source=frame, conf=conf_thres, verbose=False ,stream=False)
-                results2 = self.model2.predict(source=frame, conf=conf_thres, verbose=False ,stream=False)
+                results1 = self.model1.predict(source=frame, conf=conf_thres, verbose=False, stream=False)
+                results2 = self.model2.predict(source=frame, conf=conf_thres, verbose=False, stream=False)
 
                 # 合并两个模型的推理结果
                 combined_results = results1 + results2
 
-                # 绘制检测框并发布最大目标
-                annotated_frame = self._draw_detections(frame, combined_results)
+                # ✅ 创建 msg，并传入绘图函数
+                msg = DetectedBox()
+                annotated_frame = self._draw_detections(frame, combined_results, msg)
 
                 # 显示处理图像
                 window_width, window_height = 1920, 1080
@@ -282,16 +282,20 @@ class AIDetector(Node):
                 cv2.imshow('AI Detection', resized_frame)
                 cv2.waitKey(1)
 
-                # 打印性能日志
+                # ✅ 输出调试日志
+                duration_ms = (time.time() - start_time) * 1000
                 self.get_logger().info(
-                    f"处理延迟: {(time.time() - start_time) * 1000:.1f}ms",
+                    f"处理时长: {duration_ms:.1f}ms | 当前状态: {self.current_state} | 坐标: "
+                    f"x1={getattr(msg, 'x1', -1):.0f}, y1={getattr(msg, 'y1', -1):.0f}, "
+                    f"x2={getattr(msg, 'x2', -1):.0f}, y2={getattr(msg, 'y2', -1):.0f} | servo={getattr(msg, 'servo', -1)}",
                     throttle_duration_sec=0.33
                 )
+
             except Exception as e:
                 self.get_logger().error(f"推理过程出错: {str(e)}")
                 time.sleep(0.05)
 
-    def _draw_detections(self, frame, results):
+    def _draw_detections(self, frame, results, msg: DetectedBox):
         """绘制检测结果，分开发布 circle 和 H 坐标，servo=1 只受 circle 控制"""
         cv2.circle(frame, (self.center_1x, self.center_1y), self.radius, (0, 255, 255), 2, cv2.LINE_AA)
         cv2.circle(frame, (self.center_2x, self.center_2y), self.radius, (0, 255, 255), 2, cv2.LINE_AA)
@@ -353,14 +357,24 @@ class AIDetector(Node):
                 # 存储为 Doland 模式下的最后有效坐标
                 self.last_h_detected_in_doland = (cx, cy)
                 self.last_h_detected_time = time.time()
-                self.get_logger().info(f"[Doland-H] 识别到 H，坐标=({cx},{cy})")
+                #self.get_logger().info(f"[Doland-H] 识别到 H，坐标=({cx},{cy})")
+                #throttle_duration_sec = 0.33
 
             elif self.last_h_detected_in_doland:
                 # 若当前帧未检测到 H，使用上一帧坐标
                 cx, cy = self.last_h_detected_in_doland
                 msg.x2 = float(cx)
                 msg.y2 = float(cy)
-                self.get_logger().warn(f"[Doland-H] 当前未识别，继续使用历史坐标 ({cx},{cy})")
+                #self.get_logger().warn(f"[Doland-H] 当前未识别，继续使用历史坐标 ({cx},{cy})")
+                #throttle_duration_sec = 0.33
+            self.box_pub.publish(msg)
+            self.get_logger().info(
+                f"当前状态: {self.current_state} | 坐标: "
+                f"x1={getattr(msg, 'x1', -1):.0f}, y1={getattr(msg, 'y1', -1):.0f}, "
+                f"x2={getattr(msg, 'x2', -1):.0f}, y2={getattr(msg, 'y2', -1):.0f} | servo={getattr(msg, 'servo', -1)}",
+
+            )
+            return frame
 
 
         elif self.current_state != 1:
@@ -387,7 +401,7 @@ class AIDetector(Node):
                             h_boxes.append((area, x1, y1, x2, y2))
 
             # 初始化消息
-            msg = DetectedBox()
+            #msg = DetectedBox()
             msg.servo = 0
 
             # ----- 处理 circle 区域检测与 servo -----
@@ -539,9 +553,58 @@ class AIDetector(Node):
 
             # 发布消息（只发一条，包含 circle 和 H 的中心坐标）
             self.box_pub.publish(msg)
+            self.get_logger().info(
+                f"当前状态: {self.current_state} | 坐标: "
+                f"x1={getattr(msg, 'x1', -1):.0f}, y1={getattr(msg, 'y1', -1):.0f}, "
+                f"x2={getattr(msg, 'x2', -1):.0f}, y2={getattr(msg, 'y2', -1):.0f} | servo={getattr(msg, 'servo', -1)}",
+
+            )
             return frame
 
         else:
+            circle_boxes = []
+            h_boxes = []
+
+            for result in results:
+                for box in result.boxes.cpu().numpy():
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    cls_id = int(box.cls[0])
+                    label_name = result.names[cls_id]
+                    conf = float(box.conf[0])
+
+                    if label_name != 'person':
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                        cv2.putText(frame, f"{label_name} {conf:.2f}", (x1, y1 - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+                        area = (x2 - x1) * (y2 - y1)
+                        if label_name == 'circle':
+                            circle_boxes.append((area, x1, y1, x2, y2))
+                        elif label_name == 'H':
+                            h_boxes.append((area, x1, y1, x2, y2))
+
+            # 初始化消息
+            #msg = DetectedBox()
+            msg.servo = 0
+
+            # ----- 处理 circle 区域检测与 servo -----
+            if circle_boxes and (self.pause_until is None or time.time() >= self.pause_until):
+                _, x1, y1, x2, y2 = max(circle_boxes, key=lambda b: b[0])
+                cx = (x1 + x2) // 2
+                cy = (y1 + y2) // 2
+
+                msg.x1 = float(cx)
+                msg.y1 = float(cy)
+            if h_boxes:
+                _, x1, y1, x2, y2 = max(h_boxes, key=lambda b: b[0])
+                cx = (x1 + x2) // 2
+                cy = (y1 + y2) // 2
+
+                msg.x2 = float(cx)
+                msg.y2 = float(cy)
+
+            # 发布消息（只发一条，包含 circle 和 H 的中心坐标）
+            self.box_pub.publish(msg)
             return frame
 
 

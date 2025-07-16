@@ -17,10 +17,10 @@ class ServoTestNode(Node):
 
     def test_sequence(self):
         if self.step == 0:
-            self.get_logger().info("测试 Servo11（左舵）发射")
+            self.get_logger().info("测试 Servo11（右舵）发射")
             self.servo_ctrl.fire_servo(11)
         elif self.step == 1:
-            self.get_logger().info("测试 Servo12（右舵）发射")
+            self.get_logger().info("测试 Servo12（左舵）发射")
             self.servo_ctrl.fire_servo(12)
         else:
             self.get_logger().info("测试完成，关闭节点")

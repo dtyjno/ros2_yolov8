@@ -72,18 +72,20 @@ class AIDetector(Node):
         self._init_threads()
         # 圆心相关初始化
         self.center_1x, self.center_1y = 710, 450 # 圆心位置640.360      135,110     右侧
-        self.center_2x, self.center_2y = 650, 450  # 圆心位置  后面
+        self.center_2x, self.center_2y = 630, 450  # 圆心位置  640.360      135,110     左侧
         self.radius = 40  # 半径
 
+        self.prev_state=0
 
         self.inside_counter = 0  # 连续帧计数
         self.inside_threshold = 60  # 连续帧阈值
 
         # ====== 投弹计时器相关变量 ======
         self.stay_start_time = None  # 记录进入圆内且满足高度时的起始时间戳
-        self.stay_duration_threshold = 2.0  # 满足条件后持续时间（秒）阈值
+        self.stay_duration_threshold = 1.5  # 满足条件后持续时间（秒）阈值
 
-
+        self.last_servo_value = 0  # 初始化
+        self.sum_servo_value = 0  # 初始化
 
         self.pause_until = None  # 控制发布暂停时间
 
@@ -129,8 +131,6 @@ class AIDetector(Node):
 
 
 
-
-
     def _init_camera(self):
         """初始化视频采集设备"""
         camera_id = self.get_parameter('camera_id').value
@@ -148,7 +148,10 @@ class AIDetector(Node):
 
     def _state_callback(self, msg: Int32):
         self.current_state = msg.data
-        self.get_logger().info(f"接收到状态更新: {self.current_state}", throttle_duration_sec=2.0)
+        if self.current_state != self.prev_state:
+            self.get_logger().info(f"接收到状态更新: {self.current_state}", throttle_duration_sec=2.0)
+            self.prev_state = self.current_state
+
         if self.current_state == 4:
             self.h_detection_active = True
             self.last_h_detected_in_doland = None  # 每次进入 Doland 都重新开始
@@ -279,7 +282,7 @@ class AIDetector(Node):
                 # 显示处理图像
                 window_width, window_height = 1920, 1080
                 resized_frame = cv2.resize(annotated_frame, (window_width, window_height))
-                cv2.imshow('AI Detection', resized_frame)
+                cv2.imshow('Detection', resized_frame)
                 cv2.waitKey(1)
 
                 # ✅ 输出调试日志
@@ -368,12 +371,12 @@ class AIDetector(Node):
                 #self.get_logger().warn(f"[Doland-H] 当前未识别，继续使用历史坐标 ({cx},{cy})")
                 #throttle_duration_sec = 0.33
             self.box_pub.publish(msg)
-            self.get_logger().info(
-                f"当前状态: {self.current_state} | 坐标: "
-                f"x1={getattr(msg, 'x1', -1):.0f}, y1={getattr(msg, 'y1', -1):.0f}, "
-                f"x2={getattr(msg, 'x2', -1):.0f}, y2={getattr(msg, 'y2', -1):.0f} | servo={getattr(msg, 'servo', -1)}",
+            #self.get_logger().info(
+               # f"当前状态: {self.current_state} | 坐标: "
+               # f"x1={getattr(msg, 'x1', -1):.0f}, y1={getattr(msg, 'y1', -1):.0f}, "
+               # f"x2={getattr(msg, 'x2', -1):.0f}, y2={getattr(msg, 'y2', -1):.0f} | servo={getattr(msg, 'servo', -1)}",
 
-            )
+            #)
             return frame
 
 
@@ -396,13 +399,16 @@ class AIDetector(Node):
 
                         area = (x2 - x1) * (y2 - y1)
                         if label_name == 'circle':
+                            cx = (x1 + x2) // 2
+                            cy = (y1 + y2) // 2
+                            cv2.circle(frame, (cx, cy), 5, (0, 0, 255), -1)  # 红点
                             circle_boxes.append((area, x1, y1, x2, y2))
                         elif label_name == 'H':
                             h_boxes.append((area, x1, y1, x2, y2))
 
             # 初始化消息
             #msg = DetectedBox()
-            msg.servo = 0
+            #msg.servo = 0
 
             # ----- 处理 circle 区域检测与 servo -----
             if circle_boxes and (self.pause_until is None or time.time() >= self.pause_until):
@@ -430,69 +436,24 @@ class AIDetector(Node):
                 # ======== 判断是否满足开始计时的条件（高度 < 1.5m 或无雷达）========
                 altitude_ok = (
                         self.rangefinder_height is None or
-                        self.rangefinder_height < 1.5
+                        self.rangefinder_height < 1.9
                 )
 
                 # ======== 满足条件则开始计时，不满足则重置 ========
                 current_time = time.time()
-
-                if in_target_area and self.current_state == 0 and altitude_ok:
+                msg.servo = self.last_servo_value
+                if in_target_area and self.current_state == 0 and altitude_ok and self.last_servo_value!=3 :
                     if self.stay_start_time is None:
                         self.stay_start_time = current_time
                         self.get_logger().info("开始计时：目标在圆内，且高度满足")
                     else:
                         elapsed = current_time - self.stay_start_time
                         self.get_logger().info(f"计时中：{elapsed:.1f}s / {self.stay_duration_threshold}s",
-                                               throttle_duration_sec=1.0)
+                                               throttle_duration_sec=0.33)
                 else:
                     if self.stay_start_time is not None:
                         self.get_logger().info("计时中断，条件不满足，重置计时器")
                     self.stay_start_time = None
-
-
-
-
-                """
-
-                altitude_ok = (
-                        self.rangefinder_height is None or
-                        self.rangefinder_height < 1.5
-                )
-
-                # ======== 满足条件才计数 ========
-                if in_target_area and self.current_state == 0 and altitude_ok:
-                    self.inside_counter += 1
-                    if(self.inside_counter==1):
-                        self.get_logger().info("开始计数！")
-                elif self.current_state == 0:
-                    self.inside_counter = 0
-
-                if (d1x * d1x + d1y * d1y <= self.radius * self.radius or d2x * d2x + d2y * d2y <= self.radius * self.radius) and self.current_state == 0:
-                    self.inside_counter += 1
-                elif self.current_state == 0:
-                    self.inside_counter = 0
-                
-
-                
-                if self.inside_counter >= self.inside_threshold and self.current_state == 0:  # 投弹发布
-                    if d1x * d1x + d1y * d1y <= self.radius * self.radius :
-                        self.get_logger().info("前舵投弹！！！")
-                        servo_id = 11  # 前舵机
-                    else:
-                        self.get_logger().info("后舵投弹！！！")
-                        servo_id = 12  # 后舵机
-
-                    # 调用封装好的投弹函数
-                    if hasattr(self, 'servo_ctrl') and self.servo_ready:
-                        self.servo_ctrl.fire_servo(servo_id)
-                    else:
-                        self.get_logger().warn(f"[Servo] MAVROS未启动，跳过 Servo{servo_id} 投弹动作")
-
-                    msg.servo = 1
-                    self.pause_until = time.time() + 1.5
-                    self.inside_counter = 0
-                    self.get_logger().info("circle 连续30帧在圆内，servo=1 已发布")
-                """
 
                 # ======= 判断是否已达到视觉投弹条件 =======
                 #if self.inside_counter >= self.inside_threshold and self.current_state == 0:  # 投弹发布条件
@@ -502,43 +463,73 @@ class AIDetector(Node):
                             time.time() - self.stay_start_time >= self.stay_duration_threshold) and self.current_state == 0:
 
                     # ======= 判断激光雷达高度是否满足条件 =======
-                    # 若激光雷达可用且高度 ≥ 1.5m，则跳过投弹
-                    if self.rangefinder_height is not None and self.rangefinder_height >= 1.5:
+                    # 若激光雷达可用且高度 ≥ 1.9m，则跳过投弹
+                    if self.rangefinder_height is not None and self.rangefinder_height >= 1.9:
                         self.get_logger().warn(
-                            f"[LIDAR] 当前高度为 {self.rangefinder_height:.2f} m，超过投弹限制（<1.5m），跳过投弹"
+                            f"[LIDAR] 当前高度为 {self.rangefinder_height:.2f} m，超过投弹限制（<1.9m），跳过投弹"
                         )
-                        self.inside_counter = 0  # 重置连续帧计数器，避免误触发
+                        #self.inside_counter = 0  # 重置连续帧计数器，避免误触发
+                        self.stay_start_time = None
+                        self.box_pub.publish(msg)
+                        return frame
+                    msg.servo=self.last_servo_value
+                    # ======= 视觉判定前后舵机 =======
+                    if d1x * d1x + d1y * d1y <= self.radius * self.radius and self.last_servo_value != 1 and self.sum_servo_value!=2:
+                        self.get_logger().info("右舵投弹！！！")
+                        servo_id = 11  # 右舵机
+                        msg.servo = 1
+                        self.last_servo_value = msg.servo
+                        self.sum_servo_value+=1
+                        self.stay_start_time=None
+                        try:
+                            if self.servo_ready and hasattr(self, 'servo_ctrl'):
+                                self.box_pub.publish(msg)
+                                self.servo_ctrl.fire_servo(servo_id)
+                                self.box_pub.publish(msg)
+                            else:
+                                self.get_logger().warn(f"[Servo] MAVROS未启动，跳过 Servo{servo_id} 投弹动作")
+                        except Exception as e:
+                            self.get_logger().error(f"[Servo] 投弹执行出错: {e}")
+                    elif self.last_servo_value !=2 and self.sum_servo_value!=2 and d2x * d2x + d2y * d2y <= self.radius * self.radius:
+                        self.get_logger().info("左舵投弹！！！")
+                        servo_id = 12  # 左舵机
+                        msg.servo = 2
+                        self.last_servo_value = msg.servo
+                        self.sum_servo_value += 1
+                        self.stay_start_time=None
+                        try:
+                            if self.servo_ready and hasattr(self, 'servo_ctrl'):
+                                self.box_pub.publish(msg)
+                                self.servo_ctrl.fire_servo(servo_id)
+                                self.box_pub.publish(msg)
+                            else:
+                                self.get_logger().warn(f"[Servo] MAVROS未启动，跳过 Servo{servo_id} 投弹动作")
+                        except Exception as e:
+                            self.get_logger().error(f"[Servo] 投弹执行出错: {e}")
+                    elif self.sum_servo_value==2:
+                        msg.servo = 3
+                        self.box_pub.publish(msg)
+                        self.last_servo_value = msg.servo
+                        self.get_logger().info("已完成前后舵投弹，servo=3 发送完成")
+
                         return frame
 
-                    # ======= 视觉判定前后舵机 =======
-                    if d1x * d1x + d1y * d1y <= self.radius * self.radius:
-                        self.get_logger().info("右舵投弹！！！")
-                        servo_id = 11  # 前舵机
-                    else:
-                        self.get_logger().info("左舵投弹！！！")
-                        servo_id = 12  # 后舵机
-
                     # ======= 舵机控制执行（try 兼容未启动）=======
-                    try:
-                        if self.servo_ready and hasattr(self, 'servo_ctrl'):
-                            self.servo_ctrl.fire_servo(servo_id)
-                        else:
-                            self.get_logger().warn(f"[Servo] MAVROS未启动，跳过 Servo{servo_id} 投弹动作")
-                    except Exception as e:
-                        self.get_logger().error(f"[Servo] 投弹执行出错: {e}")
+
 
                     # ======= 发布投弹信号并更新状态 =======
-                    if (servo_id == 11):
-                        msg.servo = 1
-                    elif (servo_id==12):
-                        msg.servo = 2
-
-                    self.pause_until = time.time() + 1.5
+                    self.last_servo_value =msg.servo
+                    #self.pause_until = time.time() + 1
                     self.inside_counter = 0
                     self.stay_start_time = None
                     #self.get_logger().info("circle 连续60帧在圆内，servo 已发布")
-                    self.get_logger().info("circle 连续3s在圆内，servo 已发布")
-
+                    self.box_pub.publish(msg)
+                    self.get_logger().info("circle 连续1.5s在圆内，servo 已发布")
+                    self.get_logger().info(
+                    f"当前状态: {self.current_state} | 坐标: "
+                    f"x1={getattr(msg, 'x1', -1):.0f}, y1={getattr(msg, 'y1', -1):.0f}, "
+                    f"x2={getattr(msg, 'x2', -1):.0f}, y2={getattr(msg, 'y2', -1):.0f} | servo={getattr(msg, 'servo', -1)}",
+                     )
 
 
 
@@ -550,15 +541,17 @@ class AIDetector(Node):
 
                 msg.x2 = float(cx)
                 msg.y2 = float(cy)
-
+            msg.servo = self.last_servo_value
             # 发布消息（只发一条，包含 circle 和 H 的中心坐标）
             self.box_pub.publish(msg)
-            self.get_logger().info(
-                f"当前状态: {self.current_state} | 坐标: "
-                f"x1={getattr(msg, 'x1', -1):.0f}, y1={getattr(msg, 'y1', -1):.0f}, "
-                f"x2={getattr(msg, 'x2', -1):.0f}, y2={getattr(msg, 'y2', -1):.0f} | servo={getattr(msg, 'servo', -1)}",
 
-            )
+            #self.get_logger().info(
+                #f"当前状态: {self.current_state} | 坐标: "
+                #f"x1={getattr(msg, 'x1', -1):.0f}, y1={getattr(msg, 'y1', -1):.0f}, "
+                #f"x2={getattr(msg, 'x2', -1):.0f}, y2={getattr(msg, 'y2', -1):.0f} | servo={getattr(msg, 'servo', -1)}",
+
+            #)
+
             return frame
 
         else:
@@ -585,7 +578,7 @@ class AIDetector(Node):
 
             # 初始化消息
             #msg = DetectedBox()
-            msg.servo = 0
+            #msg.servo = 0
 
             # ----- 处理 circle 区域检测与 servo -----
             if circle_boxes and (self.pause_until is None or time.time() >= self.pause_until):

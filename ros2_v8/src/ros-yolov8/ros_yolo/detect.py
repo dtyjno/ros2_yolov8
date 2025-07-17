@@ -436,7 +436,7 @@ class AIDetector(Node):
                 # ======== 判断是否满足开始计时的条件（高度 < 1.5m 或无雷达）========
                 altitude_ok = (
                         self.rangefinder_height is None or
-                        self.rangefinder_height < 1.9
+                        self.rangefinder_height < 1.6
                 )
 
                 # ======== 满足条件则开始计时，不满足则重置 ========
@@ -463,10 +463,10 @@ class AIDetector(Node):
                             time.time() - self.stay_start_time >= self.stay_duration_threshold) and self.current_state == 0:
 
                     # ======= 判断激光雷达高度是否满足条件 =======
-                    # 若激光雷达可用且高度 ≥ 1.9m，则跳过投弹
-                    if self.rangefinder_height is not None and self.rangefinder_height >= 1.9:
+                    # 若激光雷达可用且高度 ≥ 1.6m，则跳过投弹
+                    if self.rangefinder_height is not None and self.rangefinder_height >= 1.6:
                         self.get_logger().warn(
-                            f"[LIDAR] 当前高度为 {self.rangefinder_height:.2f} m，超过投弹限制（<1.9m），跳过投弹"
+                            f"[LIDAR] 当前高度为 {self.rangefinder_height:.2f} m，超过投弹限制（<1.6m），跳过投弹"
                         )
                         #self.inside_counter = 0  # 重置连续帧计数器，避免误触发
                         self.stay_start_time = None

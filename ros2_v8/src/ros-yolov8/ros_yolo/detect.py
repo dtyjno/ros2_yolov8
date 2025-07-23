@@ -1,5 +1,3 @@
-# src/ros2-yolov8/ros_yolo/detect_v8.py
-
 """
 // 将当前状态发布到currentstate 1=circle:shot/sco 2=h:land
 inline int fly_state_to_int(FlyState state) {
@@ -16,19 +14,14 @@ inline int fly_state_to_int(FlyState state) {
     default: return 1;
   }
 }
-
+#飞行状态
 """
 
-
-
-
-from ros2_yolo_msgs.msg import DetectedBox
 from std_msgs.msg import Int32
 import rclpy
 from rclpy.node import Node
-from rclpy.parameter import Parameter
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, Range
 from cv_bridge import CvBridge
 import cv2
 from ultralytics import YOLO
@@ -36,11 +29,13 @@ import threading
 import time
 import numpy as np
 from ros_yolo.servo_controller import ServoController
-from sensor_msgs.msg import Range  # 订阅激光雷达高度数据
-
+from vision_msgs.msg import Detection2DArray, Detection2D, BoundingBox2D, ObjectHypothesisWithPose, Pose2D
+from geometry_msgs.msg import Point
+from std_msgs.msg import Header
+from visualization_msgs.msg import MarkerArray, Marker
 
 class AIDetector(Node):
-    """智能检测节点（含摄像头直读+原始图像发布）"""
+    """智能检测节点（摄像头/RTSP/RTMP/ROS话题自动切换，统一处理流程）"""
 
     def __init__(self):
         super().__init__('detector')
@@ -49,135 +44,158 @@ class AIDetector(Node):
         self.declare_parameters(
             namespace='',
             parameters=[
-                ('camera_id', '0'),  # 摄像头ID/URL
-                ('model_path1', '/home/ak47k98/PycharmProjects/ros2_v8/best_circle.pt'),  # 模型路径1
-                ('model_path2', '/home/ak47k98/PycharmProjects/ros2_v8/best_H.pt'),# 模型路径2
-                ('conf_threshold', 0.6),  # 置信度阈值
-                ('device', 'cuda:0'),  # 推理设备
-                ('frame_size', [1920, 1080]),  # [宽, 高]
-                ('publish_raw', True),  # 是否发布原始图像
-                # ('rtsp_url', '')               # RTSP预留接口
+                ('camera_id', ''),
+                #('image_topic', 'raw_images'),
+                ('image_topic', 'image_topic'),  # 图像订阅话题
+                ('model_path1', '/home/ak47k98/PycharmProjects/ros2_v8/best_circle.pt'),
+                ('model_path2', '/home/ak47k98/PycharmProjects/ros2_v8/best_H.pt'),
+                ('conf_threshold', 0.6),
+                ('device', 'cuda:0'),
+                ('frame_size', [1920, 1080]),
+                ('publish_raw', True),
             ]
         )
 
-        # ========== 硬件初始化 ==========
-        self._init_camera()
         self.bridge = CvBridge()
+        self.camera_id = self.get_parameter('camera_id').value
+        self.image_topic = self.get_parameter('image_topic').value
+
+        # ========== 输入源初始化 ==========
+        self.cap = None
+        self.image_sub = None
+        self.running = False
+        self.cap_thread = None
+        self.proc_thread = None
+        self.latest_frame = None
+        self.frame_lock = threading.Lock()
+
+
 
         # ========== 模型初始化 ==========
         self._init_model()
 
+        # ========== 类别映射初始化 ==========
+        self._init_class_mapping()
+
         # ========== ROS接口 ==========
         self._init_publishers()
-        self._init_threads()
+
+        # 可视化订阅
+        self.visualization_targets = []
+        self.visualization_subscriber = self.create_subscription(
+            MarkerArray, 'visualization_targets', self._visualization_callback, 10
+        )
+        self.get_logger().info("Subscribing to '/visualization_targets' for prediction circles.")
+
         # 圆心相关初始化
-        self.center_1x, self.center_1y = 710, 450 # 圆心位置640.360      135,110     右侧
-        self.center_2x, self.center_2y = 630, 450  # 圆心位置  640.360      135,110     左侧
-        self.radius = 40  # 半径
+        self.center_1x, self.center_1y = 700, 450 # 1280,720
+        self.center_2x, self.center_2y = 620, 450
+        self.radius = 35
+        self.prev_state = 0
+        self.stay_start_time = None
+        self.stay_duration_threshold = 1.5
+        self.last_servo_value = 0
+        self.sum_servo_value = 0
+        self.pause_until = None
 
-        self.prev_state=0
-
-        self.inside_counter = 0  # 连续帧计数
-        self.inside_threshold = 60  # 连续帧阈值
-
-        # ====== 投弹计时器相关变量 ======
-        self.stay_start_time = None  # 记录进入圆内且满足高度时的起始时间戳
-        self.stay_duration_threshold = 1.5  # 满足条件后持续时间（秒）阈值
-
-        self.last_servo_value = 0  # 初始化
-        self.sum_servo_value = 0  # 初始化
-
-        self.pause_until = None  # 控制发布暂停时间
-
+        # 相机标定
         self._load_camera_calibration('rgb_camera_calib_1.npz')
+        h, w = 720, 1280
+        if self.camera_matrix is not None and self.dist_coeffs is not None:
+            self.map1, self.map2 = cv2.initUndistortRectifyMap(
+                self.camera_matrix, self.dist_coeffs, None,
+                self.camera_matrix, (w, h), cv2.CV_16SC2
+            )
+        else:
+            self.map1, self.map2 = None, None
 
-        self.current_state = 0  # 默认状态
+        # 飞控状态
+        self.current_state = 0
         self.state_sub = self.create_subscription(
-            Int32,
-            'current_state',
-            self._state_callback,
-            10
+            Int32, 'current_state', self._state_callback, 10
+        )
 
+
+
+        # 降落相关变量
+        self.last_h_detected_in_doland = None
+        self.last_h_detected_time = None
+        self.h_detection_active = False
+
+
+        if self.camera_id:
+            self.cap = cv2.VideoCapture(self.camera_id)
+            if self.cap.isOpened():
+                frame_size = self.get_parameter('frame_size').value
+                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_size[0])
+                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_size[1])
+                self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                self.running = True
+                self._init_threads()
+                self.get_logger().info(f"视频源模式: {self.camera_id}")
+            else:
+                self.cap = None
+                self.get_logger().warn(f"无法打开视频源 '{self.camera_id}'，自动切换到ROS话题模式")
+                self._init_ros_image_subscriber()
+        else:
+            self._init_ros_image_subscriber()
+            self.get_logger().info(f"ROS话题模式: {self.image_topic}")
+        # 舵机控制
+
+
+        #try:
+            #self.servo_ctrl = ServoController(self, namespace="/mavros/")
+            #self.servo_ready = True
+        #except Exception as e:
+            #self.get_logger().warn(f"MAVROS 未启动，舵机控制不可用：{e}")
+            #self.servo_ready = False
+
+        self.servo_ctrl = None
+        self.servo_ready = False
+        # 激光雷达订阅
+        self.rangefinder_height = None
+        self.rangefinder_sub = self.create_subscription(
+            Range, '/mavros/rangefinder/rangefinder', self._range_callback, 10
         )
-        # 建议放在摄像头初始化后
-        h, w = 720, 1280  # 替换为你的图像尺寸，或者动态从第一帧获取
-        self.map1, self.map2 = cv2.initUndistortRectifyMap(
-            self.camera_matrix, self.dist_coeffs, None,
-            self.camera_matrix, (w, h), cv2.CV_16SC2
+        threading.Thread(target=self._try_init_servo_controller, daemon=True).start()
+
+    def _init_ros_image_subscriber(self):
+        qos = QoSProfile(depth=1, reliability=QoSReliabilityPolicy.BEST_EFFORT)
+        self.image_sub = self.create_subscription(
+            Image, self.image_topic, self._ros_image_callback, qos
         )
+
+    def _try_init_servo_controller(self):
         try:
             self.servo_ctrl = ServoController(self, namespace="/mavros/")
             self.servo_ready = True
+            self.get_logger().info("舵机控制器初始化完成")
         except Exception as e:
             self.get_logger().warn(f"MAVROS 未启动，舵机控制不可用：{e}")
             self.servo_ready = False
-
-        self.last_h_detected_in_doland = None  # 存储在 Doland 状态下最后一次检测到的 H 坐标
-        self.last_h_detected_time = None  # 可选，用于后续淘汰逻辑
-        self.h_detection_active = False  # 控制是否允许记录（仅 Doland 模式）
-
-        # ========== 激光雷达订阅 ==========
-        # 订阅话题 /mavros/rangefinder/rangefinder
-        # 消息类型 sensor_msgs/msg/Range
-        # 用于获取实时的飞行高度，用于投弹判断（高度 < 1.5m 时允许投弹）
-        # 若 MAVROS 未运行，不会触发回调，rangefinder_height 会一直是 None
-        self.rangefinder_height = None  # 用于存储实时高度数据
-        self.rangefinder_sub = self.create_subscription(
-            Range,
-            '/mavros/rangefinder/rangefinder',
-            self._range_callback,
-            10
-        )
-
-
-
-    def _init_camera(self):
-        """初始化视频采集设备"""
-        camera_id = self.get_parameter('camera_id').value
-        self.cap = cv2.VideoCapture(camera_id)
-
-        if not self.cap.isOpened():
-            self.get_logger().error(f"无法打开摄像头: {camera_id}")
-            raise RuntimeError("Camera open failed")
-
-        # 设置采集参数
-        frame_size = self.get_parameter('frame_size').value
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_size[0])
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_size[1])
-        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # 最小化缓冲区
-
-    def _state_callback(self, msg: Int32):
-        self.current_state = msg.data
-        if self.current_state != self.prev_state:
-            self.get_logger().info(f"接收到状态更新: {self.current_state}", throttle_duration_sec=2.0)
-            self.prev_state = self.current_state
-
-        if self.current_state == 4:
-            self.h_detection_active = True
-            self.last_h_detected_in_doland = None  # 每次进入 Doland 都重新开始
-        else:
-            self.h_detection_active = False
-            self.last_h_detected_in_doland = None
+    def _ros_image_callback(self, msg: Image):
+        try:
+            frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+            self._process_frame(frame)
+        except Exception as e:
+            self.get_logger().error(f"ROS图像转换失败: {e}")
 
     def _init_model(self):
-        """初始化AI模型"""
         device = self.get_parameter('device').value
         try:
             model_path1 = self.get_parameter('model_path1').value
             model_path2 = self.get_parameter('model_path2').value
-
             self.model1 = YOLO(model_path1).to(device)
             self.model2 = YOLO(model_path2).to(device)
             self.model1.fuse()
             self.model2.fuse()
-
             self.get_logger().info(f"已加载模型1: {model_path1} → {device}")
             self.get_logger().info(f"已加载模型2: {model_path2} → {device}")
         except Exception as e:
             self.get_logger().error(f"模型加载失败: {str(e)}")
             raise
+
     def _load_camera_calibration(self, path):
-        """加载相机标定参数"""
         try:
             calib_data = np.load(path)
             self.camera_matrix = calib_data['camera_matrix']
@@ -188,58 +206,27 @@ class AIDetector(Node):
             self.camera_matrix = None
             self.dist_coeffs = None
 
-
     def _init_publishers(self):
-        """初始化发布器"""
-        qos = QoSProfile(
-            depth=1,
-            reliability=QoSReliabilityPolicy.BEST_EFFORT
-        )
-
-        # 原始图像发布器
+        qos = QoSProfile(depth=1, reliability=QoSReliabilityPolicy.BEST_EFFORT)
         if self.get_parameter('publish_raw').value:
             self.raw_pub = self.create_publisher(Image, 'raw_images', qos)
         else:
             self.raw_pub = None
-        self.box_pub = self.create_publisher(
-            DetectedBox,
-            'detected_boxes',
-            10
-        )
-    def _init_threads(self):
-        """启动处理线程"""
-        self.latest_frame = None
-        self.frame_lock = threading.Lock()
-        self.running = True
+        self.det2d_pub = self.create_publisher(Detection2DArray, 'detection2d_array', 10)
+        self.servo_pub = self.create_publisher(Int32, 'servo_state', 10)
 
-        # 图像采集线程
+    def _init_threads(self):
+        self.running = True
         self.cap_thread = threading.Thread(target=self._capture_loop)
         self.cap_thread.start()
 
-        # AI处理线程
-        self.proc_thread = threading.Thread(target=self._process_loop)
-        self.proc_thread.start()
-
-    def _range_callback(self, msg: Range):
-        """
-        激光雷达高度回调函数
-        从 /mavros/rangefinder/rangefinder 获取当前飞行高度，单位为米。
-        """
-        self.rangefinder_height = msg.range
-        # 可选调试信息：
-        #self.get_logger().info(f"[LIDAR] 当前高度: {self.rangefinder_height:.2f} m")
-
     def _capture_loop(self):
-        """图像采集循环"""
         while self.running:
             ret, frame = self.cap.read()
             if not ret:
                 self.get_logger().warn("视频帧获取失败", throttle_duration_sec=1)
                 continue
-
-            with self.frame_lock:
-                self.latest_frame = frame
-
+            self._process_frame(frame)
             # 发布原始图像
             if self.raw_pub:
                 try:
@@ -248,371 +235,379 @@ class AIDetector(Node):
                 except Exception as e:
                     self.get_logger().error(f"图像发布失败: {str(e)}")
 
-    def _process_loop(self):
-        """AI处理循环（双模型推理 + 合并检测结果）"""
-        while self.running:
-            start_time = time.time()
+    def _process_frame(self, frame):
+        start_time = time.time()
+        # 畸变矫正
+        if self.camera_matrix is not None and self.dist_coeffs is not None and self.map1 is not None:
+            frame = cv2.remap(frame, self.map1, self.map2, interpolation=cv2.INTER_LINEAR)
+        conf_thres = self.get_parameter('conf_threshold').value
+        try:
+            results1 = self.model1.predict(source=frame, conf=conf_thres, verbose=False, stream=False)
+            results2 = self.model2.predict(source=frame, conf=conf_thres, verbose=False, stream=False)
+            combined_results = results1 + results2
 
-            # 获取最新帧
-            with self.frame_lock:
-                frame = self.latest_frame.copy() if self.latest_frame is not None else None
+            detected_coords = []
+            for result in combined_results:
+                for box in result.boxes.cpu().numpy():
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    original_cls_id = int(box.cls[0])
+                    label_name = result.names[original_cls_id]
+                    unified_cls_id = self.get_unified_class_id(label_name)
+                    cx = (x1 + x2) // 2
+                    cy = (y1 + y2) // 2
+                    w = x2 - x1
+                    h = y2 - y1
+                    detected_coords.append(
+                        f"{label_name}(orig_id:{original_cls_id},unified_id:{unified_cls_id},cx:{cx},cy:{cy},w:{w},h:{h})"
+                    )
 
-            if frame is None:
-                time.sleep(0.0001)
-                continue
+            annotated_frame = self._draw_detections(frame, combined_results)
+            for target in self.visualization_targets:
+                self._draw_visualization_target(annotated_frame, target)
+            window_width, window_height = 1920, 1080
+            resized_frame = cv2.resize(annotated_frame, (window_width, window_height))
+            cv2.imshow('Detection', resized_frame)
+            cv2.waitKey(1)
 
-            if self.camera_matrix is not None and self.dist_coeffs is not None:
-                frame = cv2.remap(frame, self.map1, self.map2, interpolation=cv2.INTER_LINEAR)
+            duration_ms = (time.time() - start_time) * 1000
+            coords_info = " | 检测到: " + ", ".join(detected_coords) if detected_coords else ""
+            self.get_logger().info(
+                f"处理时长: {duration_ms:.1f}ms | 当前状态: {self.current_state} | servo: {self.last_servo_value}{coords_info}",
+                throttle_duration_sec=0.33
+            )
+        except Exception as e:
+            self.get_logger().error(f"推理过程出错: {str(e)}")
+            time.sleep(0.05)
 
-            # 推理参数
-            conf_thres = self.get_parameter('conf_threshold').value
-
-            try:
-                # 分别执行两个模型推理
-                results1 = self.model1.predict(source=frame, conf=conf_thres, verbose=False, stream=False)
-                results2 = self.model2.predict(source=frame, conf=conf_thres, verbose=False, stream=False)
-
-                # 合并两个模型的推理结果
-                combined_results = results1 + results2
-
-                # ✅ 创建 msg，并传入绘图函数
-                msg = DetectedBox()
-                annotated_frame = self._draw_detections(frame, combined_results, msg)
-
-                # 显示处理图像
-                window_width, window_height = 1920, 1080
-                resized_frame = cv2.resize(annotated_frame, (window_width, window_height))
-                cv2.imshow('Detection', resized_frame)
-                cv2.waitKey(1)
-
-                # ✅ 输出调试日志
-                duration_ms = (time.time() - start_time) * 1000
-                self.get_logger().info(
-                    f"处理时长: {duration_ms:.1f}ms | 当前状态: {self.current_state} | 坐标: "
-                    f"x1={getattr(msg, 'x1', -1):.0f}, y1={getattr(msg, 'y1', -1):.0f}, "
-                    f"x2={getattr(msg, 'x2', -1):.0f}, y2={getattr(msg, 'y2', -1):.0f} | servo={getattr(msg, 'servo', -1)}",
-                    throttle_duration_sec=0.33
-                )
-
-            except Exception as e:
-                self.get_logger().error(f"推理过程出错: {str(e)}")
-                time.sleep(0.05)
-
-    def _draw_detections(self, frame, results, msg: DetectedBox):
-        """绘制检测结果，分开发布 circle 和 H 坐标，servo=1 只受 circle 控制"""
+    def _draw_detections(self, frame, results):
         cv2.circle(frame, (self.center_1x, self.center_1y), self.radius, (0, 255, 255), 2, cv2.LINE_AA)
         cv2.circle(frame, (self.center_2x, self.center_2y), self.radius, (0, 255, 255), 2, cv2.LINE_AA)
-        # 如果状态是 3，先做 stuffed 弹窗逻辑
-        if self.current_state == 3:     #侦查
+        det_arr = Detection2DArray()
+        det_arr.header.stamp = self.get_clock().now().to_msg()
+        det_arr.header.frame_id = 'camera_frame'
+
+        circle_boxes = []
+        stuffed_boxes = []
+        h_boxes = []
+        idx = 0
+
+        for result in results:
+            for box in result.boxes.cpu().numpy():
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                original_cls_id = int(box.cls[0])
+                label_name = result.names[original_cls_id]
+                unified_cls_id = self.get_unified_class_id(label_name)
+                conf = float(box.conf[0])
+                area = (x2 - x1) * (y2 - y1)
+                cx = (x1 + x2) // 2
+                cy = (y1 + y2) // 2
+                w = x2 - x1
+                h = y2 - y1
+                if label_name == 'circle':
+                    circle_boxes.append((area, x1, y1, x2, y2, unified_cls_id, conf))
+                elif label_name == 'stuffed':
+                    stuffed_boxes.append((area, x1, y1, x2, y2, unified_cls_id, conf))
+                elif label_name == 'H':
+                    h_boxes.append((area, x1, y1, x2, y2, unified_cls_id, conf))
+                color = (0, 255, 0)
+                if label_name == 'circle':
+                    color = (255, 0, 0)
+                elif label_name == 'stuffed':
+                    color = (0, 255, 255)
+                elif label_name == 'H':
+                    color = (0, 0, 255)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+                cv2.putText(frame, f"{label_name} {conf:.2f}", (x1, y1 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                if label_name == 'circle':
+                    cv2.circle(frame, (cx, cy), 5, color, -1)
+                idx += 1
+
+        if self.current_state == 3:
             idx = 0
             for result in results:
                 for box in result.boxes.cpu().numpy():
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    cls_id = int(box.cls[0])
-                    label_name = result.names[cls_id]
+                    original_cls_id = int(box.cls[0])
+                    label_name = result.names[original_cls_id]
+                    unified_cls_id = self.get_unified_class_id(label_name)
                     conf = float(box.conf[0])
-
-                    if label_name != 'person':
-                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                        cv2.putText(frame, f"{label_name} {conf:.2f}", (x1, y1 - 10),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                    cls_id = int(box.cls[0])
-                    label_name = result.names[cls_id]
-                    if label_name != 'H':
-                        x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    if label_name in ['circle', 'H']:
+                        cx = (x1 + x2) // 2
+                        cy = (y1 + y2) // 2
+                        w = x2 - x1
+                        h = y2 - y1
+                        det2d = self.build_detection2d(cx, cy, w, h, unified_cls_id, conf, det_arr.header.stamp,
+                                                    det_arr.header.frame_id)
+                        det_arr.detections.append(det2d)
+                    if label_name in ['stuffed', 'circle']:
                         roi = frame[y1:y2, x1:x2]
-                        if roi.size == 0:
-                            continue
-                        win = f'Stuffed_{idx}'
-                        resized_roi = cv2.resize(roi, (160, 160))
-                        cv2.imshow(win, resized_roi)
-                        cv2.moveWindow(win, 50 + idx * 180, 50)  # 每个窗口水平间隔180px
-                        idx += 1
+                        if roi.size > 0:
+                            win = f'{label_name}_{idx}'
+                            resized_roi = cv2.resize(roi, (160, 160))
+                            cv2.imshow(win, resized_roi)
+                            cv2.moveWindow(win, 50 + idx * 180, 50)
+                            idx += 1
+            self.det2d_pub.publish(det_arr)
             return frame
 
         elif self.current_state == 4:
-            # ======== Doland 状态：仅处理 H 框 ========
-            h_boxes = []
-
-            for result in results:
-                for box in result.boxes.cpu().numpy():
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    cls_id = int(box.cls[0])
-                    label_name = result.names[cls_id]
-                    conf = float(box.conf[0])
-
-                    if label_name == 'H':
-                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-                        cv2.putText(frame, f"{label_name} {conf:.2f}", (x1, y1 - 10),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-
-                        area = (x2 - x1) * (y2 - y1)
-                        h_boxes.append((area, x1, y1, x2, y2))
-
-            # ======== 只输出最大的 H 坐标 or 上一帧坐标 ========
+            det_list = []
             if h_boxes:
-                _, x1, y1, x2, y2 = max(h_boxes, key=lambda b: b[0])
+                _, x1, y1, x2, y2, cls_id, conf = max(h_boxes, key=lambda b: b[0])
                 cx = (x1 + x2) // 2
                 cy = (y1 + y2) // 2
-                msg.x2 = float(cx)
-                msg.y2 = float(cy)
-
-                # 存储为 Doland 模式下的最后有效坐标
-                self.last_h_detected_in_doland = (cx, cy)
+                w = x2 - x1
+                h = y2 - y1
+                det_list.append((cls_id, cx, cy, w, h, conf))
+                self.last_h_detected_in_doland = (cls_id, cx, cy, w, h, conf)
                 self.last_h_detected_time = time.time()
-                #self.get_logger().info(f"[Doland-H] 识别到 H，坐标=({cx},{cy})")
-                #throttle_duration_sec = 0.33
-
             elif self.last_h_detected_in_doland:
-                # 若当前帧未检测到 H，使用上一帧坐标
-                cx, cy = self.last_h_detected_in_doland
-                msg.x2 = float(cx)
-                msg.y2 = float(cy)
-                #self.get_logger().warn(f"[Doland-H] 当前未识别，继续使用历史坐标 ({cx},{cy})")
-                #throttle_duration_sec = 0.33
-            self.box_pub.publish(msg)
-            #self.get_logger().info(
-               # f"当前状态: {self.current_state} | 坐标: "
-               # f"x1={getattr(msg, 'x1', -1):.0f}, y1={getattr(msg, 'y1', -1):.0f}, "
-               # f"x2={getattr(msg, 'x2', -1):.0f}, y2={getattr(msg, 'y2', -1):.0f} | servo={getattr(msg, 'servo', -1)}",
-
-            #)
-            return frame
-
-
-        elif self.current_state != 1:
-            # 分别存储两类目标框  常规逻辑
-            circle_boxes = []
-            h_boxes = []
-
-            for result in results:
-                for box in result.boxes.cpu().numpy():
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    cls_id = int(box.cls[0])
-                    label_name = result.names[cls_id]
-                    conf = float(box.conf[0])
-
-                    if label_name != 'person':
-                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                        cv2.putText(frame, f"{label_name} {conf:.2f}", (x1, y1 - 10),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-                        area = (x2 - x1) * (y2 - y1)
-                        if label_name == 'circle':
-                            cx = (x1 + x2) // 2
-                            cy = (y1 + y2) // 2
-                            cv2.circle(frame, (cx, cy), 5, (0, 0, 255), -1)  # 红点
-                            circle_boxes.append((area, x1, y1, x2, y2))
-                        elif label_name == 'H':
-                            h_boxes.append((area, x1, y1, x2, y2))
-
-            # 初始化消息
-            #msg = DetectedBox()
-            #msg.servo = 0
-
-            # ----- 处理 circle 区域检测与 servo -----
-            if circle_boxes and (self.pause_until is None or time.time() >= self.pause_until):
-                _, x1, y1, x2, y2 = max(circle_boxes, key=lambda b: b[0])
-                cx = (x1 + x2) // 2
-                cy = (y1 + y2) // 2
-
-                msg.x1 = float(cx)
-                msg.y1 = float(cy)
-
-                # 判断是否在目标圆内
-                d1x = cx - self.center_1x
-                d1y = cy - self.center_1y
-                d2x = cx - self.center_2x
-                d2y = cy - self.center_2y
-
-                # ======== 判断目标是否在任意圆心范围内 ========
-                in_target_area = (
-                        d1x * d1x + d1y * d1y <= self.radius * self.radius or
-                        d2x * d2x + d2y * d2y <= self.radius * self.radius
-                )
-
-                # ======== 判断是否允许计数（高度 < 1.5m，或没有激光雷达数据）========
-
-                # ======== 判断是否满足开始计时的条件（高度 < 1.5m 或无雷达）========
-                altitude_ok = (
-                        self.rangefinder_height is None or
-                        self.rangefinder_height < 1.6
-                )
-
-                # ======== 满足条件则开始计时，不满足则重置 ========
-                current_time = time.time()
-                msg.servo = self.last_servo_value
-                if in_target_area and self.current_state == 0 and altitude_ok and self.last_servo_value!=3 :
-                    if self.stay_start_time is None:
-                        self.stay_start_time = current_time
-                        self.get_logger().info("开始计时：目标在圆内，且高度满足")
-                    else:
-                        elapsed = current_time - self.stay_start_time
-                        self.get_logger().info(f"计时中：{elapsed:.1f}s / {self.stay_duration_threshold}s",
-                                               throttle_duration_sec=0.33)
-                else:
-                    if self.stay_start_time is not None:
-                        self.get_logger().info("计时中断，条件不满足，重置计时器")
-                    self.stay_start_time = None
-
-                # ======= 判断是否已达到视觉投弹条件 =======
-                #if self.inside_counter >= self.inside_threshold and self.current_state == 0:  # 投弹发布条件
-
-                    # ======== 投弹判断逻辑：满足持续停留时间 ========
-                if self.stay_start_time and (
-                            time.time() - self.stay_start_time >= self.stay_duration_threshold) and self.current_state == 0:
-
-                    # ======= 判断激光雷达高度是否满足条件 =======
-                    # 若激光雷达可用且高度 ≥ 1.6m，则跳过投弹
-                    if self.rangefinder_height is not None and self.rangefinder_height >= 1.6:
-                        self.get_logger().warn(
-                            f"[LIDAR] 当前高度为 {self.rangefinder_height:.2f} m，超过投弹限制（<1.6m），跳过投弹"
-                        )
-                        #self.inside_counter = 0  # 重置连续帧计数器，避免误触发
-                        self.stay_start_time = None
-                        self.box_pub.publish(msg)
-                        return frame
-                    msg.servo=self.last_servo_value
-                    # ======= 视觉判定前后舵机 =======
-                    if d1x * d1x + d1y * d1y <= self.radius * self.radius and self.last_servo_value != 1 and self.sum_servo_value!=2:
-                        self.get_logger().info("右舵投弹！！！")
-                        servo_id = 11  # 右舵机
-                        msg.servo = 1
-                        self.last_servo_value = msg.servo
-                        self.sum_servo_value+=1
-                        self.stay_start_time=None
-                        try:
-                            if self.servo_ready and hasattr(self, 'servo_ctrl'):
-                                self.box_pub.publish(msg)
-                                self.servo_ctrl.fire_servo(servo_id)
-                                self.box_pub.publish(msg)
-                            else:
-                                self.get_logger().warn(f"[Servo] MAVROS未启动，跳过 Servo{servo_id} 投弹动作")
-                        except Exception as e:
-                            self.get_logger().error(f"[Servo] 投弹执行出错: {e}")
-                    elif self.last_servo_value !=2 and self.sum_servo_value!=2 and d2x * d2x + d2y * d2y <= self.radius * self.radius:
-                        self.get_logger().info("左舵投弹！！！")
-                        servo_id = 12  # 左舵机
-                        msg.servo = 2
-                        self.last_servo_value = msg.servo
-                        self.sum_servo_value += 1
-                        self.stay_start_time=None
-                        try:
-                            if self.servo_ready and hasattr(self, 'servo_ctrl'):
-                                self.box_pub.publish(msg)
-                                self.servo_ctrl.fire_servo(servo_id)
-                                self.box_pub.publish(msg)
-                            else:
-                                self.get_logger().warn(f"[Servo] MAVROS未启动，跳过 Servo{servo_id} 投弹动作")
-                        except Exception as e:
-                            self.get_logger().error(f"[Servo] 投弹执行出错: {e}")
-                    elif self.sum_servo_value==2:
-                        msg.servo = 3
-                        self.box_pub.publish(msg)
-                        self.last_servo_value = msg.servo
-                        self.get_logger().info("已完成前后舵投弹，servo=3 发送完成")
-
-                        return frame
-
-                    # ======= 舵机控制执行（try 兼容未启动）=======
-
-
-                    # ======= 发布投弹信号并更新状态 =======
-                    self.last_servo_value =msg.servo
-                    #self.pause_until = time.time() + 1
-                    self.inside_counter = 0
-                    self.stay_start_time = None
-                    #self.get_logger().info("circle 连续60帧在圆内，servo 已发布")
-                    self.box_pub.publish(msg)
-                    self.get_logger().info("circle 连续1.5s在圆内，servo 已发布")
-                    self.get_logger().info(
-                    f"当前状态: {self.current_state} | 坐标: "
-                    f"x1={getattr(msg, 'x1', -1):.0f}, y1={getattr(msg, 'y1', -1):.0f}, "
-                    f"x2={getattr(msg, 'x2', -1):.0f}, y2={getattr(msg, 'y2', -1):.0f} | servo={getattr(msg, 'servo', -1)}",
-                     )
-
-
-
-            # ----- 处理 H 坐标 -----
-            if h_boxes:
-                _, x1, y1, x2, y2 = max(h_boxes, key=lambda b: b[0])
-                cx = (x1 + x2) // 2
-                cy = (y1 + y2) // 2
-
-                msg.x2 = float(cx)
-                msg.y2 = float(cy)
-            msg.servo = self.last_servo_value
-            # 发布消息（只发一条，包含 circle 和 H 的中心坐标）
-            self.box_pub.publish(msg)
-
-            #self.get_logger().info(
-                #f"当前状态: {self.current_state} | 坐标: "
-                #f"x1={getattr(msg, 'x1', -1):.0f}, y1={getattr(msg, 'y1', -1):.0f}, "
-                #f"x2={getattr(msg, 'x2', -1):.0f}, y2={getattr(msg, 'y2', -1):.0f} | servo={getattr(msg, 'servo', -1)}",
-
-            #)
-
+                det_list.append(self.last_h_detected_in_doland)
+            for cls_id, cx, cy, w, h, conf in det_list:
+                det2d = self.build_detection2d(cx, cy, w, h, cls_id, conf, det_arr.header.stamp,
+                                            det_arr.header.frame_id)
+                det_arr.detections.append(det2d)
+            self.det2d_pub.publish(det_arr)
             return frame
 
         else:
-            circle_boxes = []
-            h_boxes = []
+            for area, x1, y1, x2, y2, cls_id, conf in circle_boxes:
+                cx = (x1 + x2) // 2
+                cy = (y1 + y2) // 2
+                w = x2 - x1
+                h = y2 - y1
+                det2d = self.build_detection2d(cx, cy, w, h, cls_id, conf, det_arr.header.stamp,
+                                            det_arr.header.frame_id)
+                det_arr.detections.append(det2d)
 
-            for result in results:
-                for box in result.boxes.cpu().numpy():
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    cls_id = int(box.cls[0])
-                    label_name = result.names[cls_id]
-                    conf = float(box.conf[0])
-
-                    if label_name != 'person':
-                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                        cv2.putText(frame, f"{label_name} {conf:.2f}", (x1, y1 - 10),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-                        area = (x2 - x1) * (y2 - y1)
-                        if label_name == 'circle':
-                            circle_boxes.append((area, x1, y1, x2, y2))
-                        elif label_name == 'H':
-                            h_boxes.append((area, x1, y1, x2, y2))
-
-            # 初始化消息
-            #msg = DetectedBox()
-            #msg.servo = 0
-
-            # ----- 处理 circle 区域检测与 servo -----
             if circle_boxes and (self.pause_until is None or time.time() >= self.pause_until):
-                _, x1, y1, x2, y2 = max(circle_boxes, key=lambda b: b[0])
-                cx = (x1 + x2) // 2
-                cy = (y1 + y2) // 2
+                target_center_x = (self.center_1x + self.center_2x) // 2
+                target_center_y = (self.center_1y + self.center_2y) // 2
+                min_distance = float('inf')
+                closest_circle = None
+                for area, x1, y1, x2, y2, cls_id, conf in circle_boxes:
+                    cx = (x1 + x2) // 2
+                    cy = (y1 + y2) // 2
+                    distance = ((cx - target_center_x) ** 2 + (cy - target_center_y) ** 2) ** 0.5
+                    if distance < min_distance:
+                        min_distance = distance
+                        closest_circle = (area, x1, y1, x2, y2, cls_id, conf)
+                if closest_circle:
+                    _, x1, y1, x2, y2, cls_id, conf = closest_circle
+                    cx = (x1 + x2) // 2
+                    cy = (y1 + y2) // 2
+                    w = x2 - x1
+                    h = y2 - y1
+                    d1x = cx - self.center_1x
+                    d1y = cy - self.center_1y
+                    d2x = cx - self.center_2x
+                    d2y = cy - self.center_2y
+                    in_target_area = (
+                        d1x * d1x + d1y * d1y <= self.radius * self.radius or
+                        d2x * d2x + d2y * d2y <= self.radius * self.radius
+                    )
+                    altitude_ok = (
+                        self.rangefinder_height is None or
+                        self.rangefinder_height <= 1.6
+                    )
+                    current_time = time.time()
+                    if in_target_area and self.current_state == 0 and altitude_ok and self.last_servo_value != 3:
+                        if self.stay_start_time is None:
+                            self.stay_start_time = current_time
+                            self.get_logger().info("开始计时：目标在圆内，且高度满足")
+                        else:
+                            elapsed = current_time - self.stay_start_time
+                            self.get_logger().info(f"计时中：{elapsed:.1f}s / {self.stay_duration_threshold}s",
+                                                throttle_duration_sec=0.33)
+                    else:
+                        if self.stay_start_time is not None:
+                            self.get_logger().info("计时中断，条件不满足，重置计时器")
+                        self.stay_start_time = None
+                    if self.stay_start_time and (
+                        time.time() - self.stay_start_time >= self.stay_duration_threshold
+                    ) and self.current_state == 0:
+                        if self.rangefinder_height is not None and self.rangefinder_height >= 1.6:
+                            self.get_logger().warn(
+                                f"[LIDAR] 当前高度为 {self.rangefinder_height:.2f} m，超过投弹限制（<1.6m），跳过投弹"
+                            )
+                            self.stay_start_time = None
+                        elif self.rangefinder_height is None:
+                            self.get_logger().warn(
+                                f"[LIDAR] 当前激光雷达无读数，跳过投弹"
+                            )
+                        else:
+                            if d1x * d1x + d1y * d1y <= self.radius * self.radius and self.last_servo_value != 1 and self.sum_servo_value != 2:
+                                self.get_logger().info("右舵投弹！！！")
+                                servo_id = 11
+                                self.last_servo_value = 1
+                                self.sum_servo_value += 1
+                                self.stay_start_time = None
+                                try:
+                                    if self.servo_ready and hasattr(self, 'servo_ctrl'):
+                                        self.servo_ctrl.fire_servo(servo_id)
+                                    else:
+                                        self.get_logger().warn(f"[Servo] MAVROS未启动，跳过 Servo{servo_id} 投弹动作")
+                                except Exception as e:
+                                    self.get_logger().error(f"[Servo] 投弹执行出错: {e}")
+                                if self.sum_servo_value == 2:
+                                    self.get_logger().info("已完成左右舵投弹")
+                                    self.last_servo_value = 3
+                            elif self.last_servo_value != 2 and self.sum_servo_value != 2 and d2x * d2x + d2y * d2y <= self.radius * self.radius:
+                                self.get_logger().info("左舵投弹！！！")
+                                servo_id = 12
+                                self.last_servo_value = 2
+                                self.sum_servo_value += 1
+                                self.stay_start_time = None
+                                try:
+                                    if self.servo_ready and hasattr(self, 'servo_ctrl'):
+                                        self.servo_ctrl.fire_servo(servo_id)
+                                    else:
+                                        self.get_logger().warn(f"[Servo] MAVROS未启动，跳过 Servo{servo_id} 投弹动作")
+                                except Exception as e:
+                                    self.get_logger().error(f"[Servo] 投弹执行出错: {e}")
 
-                msg.x1 = float(cx)
-                msg.y1 = float(cy)
+                                if self.sum_servo_value == 2:
+                                    self.get_logger().info("已完成左右舵投弹")
+                                    self.last_servo_value = 3
+                            elif self.sum_servo_value == 2:
+                                self.last_servo_value = 3
+                                self.get_logger().info("已完成前后舵投弹，servo=3 发送完成")
+                            self.stay_start_time = None
             if h_boxes:
-                _, x1, y1, x2, y2 = max(h_boxes, key=lambda b: b[0])
+                _, x1, y1, x2, y2, cls_id, conf = max(h_boxes, key=lambda b: b[0])
                 cx = (x1 + x2) // 2
                 cy = (y1 + y2) // 2
-
-                msg.x2 = float(cx)
-                msg.y2 = float(cy)
-
-            # 发布消息（只发一条，包含 circle 和 H 的中心坐标）
-            self.box_pub.publish(msg)
+                w = x2 - x1
+                h = y2 - y1
+                det2d = self.build_detection2d(cx, cy, w, h, cls_id, conf, det_arr.header.stamp,
+                                            det_arr.header.frame_id)
+                det_arr.detections.append(det2d)
+            self.det2d_pub.publish(det_arr)
+            self.servo_pub.publish(Int32(data=self.last_servo_value))
             return frame
 
+    def _visualization_callback(self, msg: MarkerArray):
+        new_targets = []    # 创建一个新的目标列表
+        for marker in msg.markers:
+            # 仅处理类型为 CYLINDER 且操作为 ADD 的标记
+            if marker.type == Marker.CYLINDER and marker.action == Marker.ADD:
+                try:
+                    # 提取标记信息并存储到目标列表
+                    target_info = {
+                        'id': int(marker.id),
+                        'category': str(marker.ns),
+                        'x': float(marker.pose.position.x),
+                        'y': float(marker.pose.position.y),
+                        'radius': max(1.0, float(marker.scale.x / 2.0)),
+                        'color': (int(marker.color.b * 255), int(marker.color.g * 255), int(marker.color.r * 255))
+                    }
+                    new_targets.append(target_info)
+                except Exception as e:
+                    # 如果解析标记时出错，记录警告日志
+                    self.get_logger().warn(f'解析可视化标记时出错: {e}')
+        # 更新可视化目标列表
+        self.visualization_targets = new_targets
+        if not new_targets:
+            # 如果目标列表为空，记录信息日志
+            self.get_logger().info("收到空的可视化目标，清除预测。",
+                                   throttle_duration_sec=5.0)
 
+    def _draw_visualization_target(self, image, target):
+        try:
+            center_x = int(target['x'])
+            center_y = int(target['y'])
+            radius = int(target['radius'])
+            color = target['color']
+            cv2.circle(image, (center_x, center_y), radius, color, 2)
+            cv2.circle(image, (center_x, center_y), 3, color, -1)
+            label = f"Pred_ID:{target['id']} ({target['category']})"
+            (text_width, text_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+            text_origin = (center_x - text_width // 2, center_y - radius - 10)
+            cv2.rectangle(image,
+                          (text_origin[0] - 2, text_origin[1] - text_height - 5),
+                          (text_origin[0] + text_width + 2, text_origin[1] + 5),
+                          (0, 0, 0), cv2.FILLED)
+            cv2.putText(image, label, (text_origin[0], text_origin[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        except Exception as e:
+            self.get_logger().error(f"绘制可视化目标ID {target.get('id', 'N/A')} 时失败: {e}")
 
+    def _range_callback(self, msg: Range):
+        try:
+            self.rangefinder_height = msg.range
+        except Exception as e:
+            pass
 
+    def build_detection2d(self, cx, cy, w, h, cls_id, conf, header_stamp, header_frame_id):
+        # 创建一个 Detection2D 对象
+        det2d = Detection2D()
+        det2d.header.stamp = header_stamp   # 设置消息头的时间戳
+        det2d.header.frame_id = header_frame_id # 设置消息头的帧 ID
+        det2d.bbox = BoundingBox2D()        # 创建一个二维边界框对象
+        # 设置边界框的中心点
+        pose = Pose2D()
+        pose.position.x = float(cx)         # 中心点的 x 坐标
+        pose.position.y = float(cy)
+        pose.theta = 0.0                    # 中心点的角度（默认为 0）
+        det2d.bbox.center = pose
+        det2d.bbox.size_x = float(w)        # 边界框的宽度
+        det2d.bbox.size_y = float(h)        # 边界框的高度
+        # 创建一个 ObjectHypothesisWithPose 对象
+        hypo = ObjectHypothesisWithPose()
+        if cls_id == 0:
+            hypo.hypothesis.class_id = str('circle')
+        elif cls_id == 2:
+            hypo.hypothesis.class_id = str('h')
+        elif cls_id == 1:
+            hypo.hypothesis.class_id = str('stuffed')
+        else:
+            hypo.hypothesis.class_id = str(cls_id)
+        hypo.hypothesis.score = conf     # 设置置信度分数
+        det2d.results = [hypo]          # 将假设结果添加到 Detection2D 对象中
+        return det2d                    # 返回 Detection2D 对象
+
+    def _state_callback(self, msg: Int32):
+        # 更新当前状态
+        self.current_state = msg.data
+        if self.current_state != self.prev_state:
+            # 如果状态发生变化，记录日志
+            self.get_logger().info(f"接收到状态更新: {self.current_state}", throttle_duration_sec=2.0)
+            self.prev_state = self.current_state
+
+        if self.current_state == 4:
+            # 如果在状态doland下，启用H的记忆
+            self.h_detection_active = True
+            self.last_h_detected_in_doland = None
+        else:
+            self.h_detection_active = False
+            self.last_h_detected_in_doland = None
 
     def destroy_node(self):
-        """节点关闭处理"""
+        # 停止运行标志
         self.running = False
-        self.cap_thread.join()
-        self.proc_thread.join()
-        self.cap.release()
+        # 等待视频捕获线程结束
+        if self.cap_thread and self.cap_thread.is_alive():
+            self.cap_thread.join()
+        # 释放视频捕获资源
+        if self.cap:
+            self.cap.release()
+        # 销毁所有OpenCV窗口
         cv2.destroyAllWindows()
+        # 调用父类的销毁方法
         super().destroy_node()
 
+    def _init_class_mapping(self):
+        self.unified_class_mapping = {
+            'circle': 0,
+            'stuffed': 1,
+            'H': 2,
+        }
+        # 反向映射：从类别ID到标签名称
+        self.id_to_label = {v: k for k, v in self.unified_class_mapping.items()}
+        self.get_logger().info(f"统一类别映射: {self.unified_class_mapping}")
+
+    def get_unified_class_id(self, label_name: str) -> int: # 根据标签名称获取统一类别ID，如果标签名称不存在，则返回-1
+        return self.unified_class_mapping.get(label_name, -1)
 
 def main(args=None):
     rclpy.init(args=args)
@@ -624,7 +619,6 @@ def main(args=None):
     finally:
         node.destroy_node()
         rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()

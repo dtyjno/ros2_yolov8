@@ -47,8 +47,8 @@ class AIDetector(Node):
                 ('camera_id', ''),
                 #('image_topic', 'raw_images'),
                 ('image_topic', 'image_topic'),  # 图像订阅话题
-                ('model_path1', '/home/ak47k98/PycharmProjects/ros2_v8/best_circle.pt'),
-                ('model_path2', '/home/ak47k98/PycharmProjects/ros2_v8/best_H.pt'),
+                ('model_path1', './src/ros2_yolov8/ros2_v8/best_circle.pt'),
+                ('model_path2', './src/ros2_yolov8/ros2_v8/best_H.pt'),
                 ('conf_threshold', 0.6),
                 ('device', 'cuda:0'),
                 ('frame_size', [1920, 1080]),
@@ -99,7 +99,7 @@ class AIDetector(Node):
         self.pause_until = None
 
         # 相机标定
-        self._load_camera_calibration('rgb_camera_calib_1.npz')
+        self._load_camera_calibration('./src/ros2_yolov8/ros2_v8/rgb_camera_calib_1.npz')
         h, w = 720, 1280
         if self.camera_matrix is not None and self.dist_coeffs is not None:
             self.map1, self.map2 = cv2.initUndistortRectifyMap(
@@ -200,11 +200,39 @@ class AIDetector(Node):
             calib_data = np.load(path)
             self.camera_matrix = calib_data['camera_matrix']
             self.dist_coeffs = calib_data['dist_coeffs']
+            
+            # 提取相机内参
+            fx = float(self.camera_matrix[0, 0])
+            fy = float(self.camera_matrix[1, 1])
+            cx = float(self.camera_matrix[0, 2])
+            cy = float(self.camera_matrix[1, 2])
+            
+            # 展平畸变系数数组并提取畸变系数
+            dist_flat = self.dist_coeffs.flatten()
+            k1 = float(dist_flat[0]) if len(dist_flat) > 0 else 0.0
+            k2 = float(dist_flat[1]) if len(dist_flat) > 1 else 0.0
+            p1 = float(dist_flat[2]) if len(dist_flat) > 2 else 0.0
+            p2 = float(dist_flat[3]) if len(dist_flat) > 3 else 0.0
+            k3 = float(dist_flat[4]) if len(dist_flat) > 4 else 0.0
+            
             self.get_logger().info("成功加载相机标定参数")
+            self.get_logger().info("=== 相机标定参数详情 ===")
+            self.get_logger().info(f"fx: {fx:.1f}")
+            self.get_logger().info(f"fy: {fy:.1f}")
+            self.get_logger().info(f"cx: {cx:.1f}")
+            self.get_logger().info(f"cy: {cy:.1f}")
+            self.get_logger().info(f"k1: {k1:.3f}")
+            self.get_logger().info(f"k2: {k2:.3f}")
+            self.get_logger().info(f"p1: {p1:.3f}")
+            self.get_logger().info(f"p2: {p2:.3f}")
+            self.get_logger().info(f"k3: {k3:.3f}")
+            self.get_logger().info("========================")
+            
         except Exception as e:
             self.get_logger().error(f"加载标定参数失败: {str(e)}")
             self.camera_matrix = None
             self.dist_coeffs = None
+
 
     def _init_publishers(self):
         qos = QoSProfile(depth=1, reliability=QoSReliabilityPolicy.BEST_EFFORT)

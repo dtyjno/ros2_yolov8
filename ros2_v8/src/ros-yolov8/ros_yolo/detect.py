@@ -89,7 +89,7 @@ class AIDetector(Node):
 
         # 圆心相关初始化
         self.center_1x, self.center_1y = 700, 450 # 1280,720
-        self.center_2x, self.center_2y = 620, 450
+        self.center_2x, self.center_2y = 610, 450
         self.radius = 35
         self.prev_state = 0
         self.stay_start_time = None

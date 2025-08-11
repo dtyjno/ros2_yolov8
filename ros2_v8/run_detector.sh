@@ -3,7 +3,7 @@
 # 保存为 run_detector.sh，赋予执行权限后使用
 
 # 项目根目录（根据实际情况调整）
-PROJECT_DIR="/home/ak47k98/PycharmProjects/ros2_v8"
+PROJECT_DIR="/home/linhao/code/ros2/dxy_apm_ws"
 
 # RTSP地址参数（可根据需要修改）
 RTSP_URL="rtsp://192.168.144.25:8554/main.264"
